@@ -1,0 +1,11 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+extract_css.*
+extract_jsx.*
+create_components.*
+make_clone.*
+footer_draft.jsx
+grid_draft.jsx
