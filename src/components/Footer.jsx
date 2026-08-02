@@ -1,22 +1,7 @@
-﻿import React from 'react';
+import React from 'react';
+import { paymentLogoList } from '../assets/images';
 
-const paymentLogos = [
-  "/gassets/payment/qris.svg",
-  "/gassets/payment/dana.svg",
-  "/gassets/payment/gopay.svg",
-  "/gassets/payment/ovo.svg",
-  "/gassets/payment/shopeepay.svg",
-  "/gassets/payment/linkaja.svg",
-  "/gassets/payment/bca.svg",
-  "/gassets/payment/bri.svg",
-  "/gassets/payment/mandiri.svg",
-  "/gassets/payment/bni.svg",
-  "/gassets/payment/bsi.svg",
-  "/gassets/payment/cimb.svg",
-  "/gassets/payment/permatabank.svg",
-  "/gassets/payment/alfamart.svg",
-  "/gassets/payment/indomaret.svg"
-];
+
 
 export default function Footer({ onNavigate }) {
   return (
@@ -57,7 +42,7 @@ export default function Footer({ onNavigate }) {
             <h3 className="title-footer2">PEMBAYARAN</h3>
             <div className="gv-footer-payments">
               <div className="gv-footer-payments__grid">
-                {paymentLogos.map((logoUrl, i) => (
+                {paymentLogoList.map((logoUrl, i) => (
                   <div className="gv-payment-badge" key={i}>
                     <img className="gv-payment-logo" src={logoUrl} alt="Payment Logo" />
                   </div>

@@ -1,7 +1,5 @@
 {
   "rewrites": [
-    { "source": "/bolehnihadmin", "destination": "/index.html" },
-    { "source": "/bolehnihadmin/(.*)", "destination": "/index.html" },
-    { "source": "/((?!gassets/).*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

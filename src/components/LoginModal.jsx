@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { icons } from '../assets/images';
+
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -52,19 +54,19 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               <ul className="auth-modal__perks">
                 <li className="auth-modal__perk">
                   <span className="auth-modal__perk-icon">
-                    <img src="/gassets/icon/article-svgrepo-com.svg" alt="" onError={(e) => e.target.style.display='none'} />
+                    <img src={icons.article} alt="" />
                   </span>
                   <p className="auth-modal__perk-text">Pantau dan simpan riwayat transaksi kamu kapan saja.</p>
                 </li>
                 <li className="auth-modal__perk">
                   <span className="auth-modal__perk-icon">
-                    <img src="/gassets/icon/gift-svgrepo-com.svg" alt="" onError={(e) => e.target.style.display='none'} />
+                    <img src={icons.gift} alt="" />
                   </span>
                   <p className="auth-modal__perk-text">Jadi yang pertama tahu info promo seru dan kumpulkan hadiah.</p>
                 </li>
                 <li className="auth-modal__perk">
                   <span className="auth-modal__perk-icon">
-                    <img src="/gassets/icon/cell-phone-svgrepo-com.svg" alt="" onError={(e) => e.target.style.display='none'} />
+                    <img src={icons.phone} alt="" />
                   </span>
                   <p className="auth-modal__perk-text">Hubungi tim bantuan lebih mudah ketika ada kendala.</p>
                 </li>
@@ -91,7 +93,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                       <span className="spinner-border spinner-border-sm me-2" role="status" />
                     ) : (
                       <img
-                        src="/gassets/icon/google-color-svgrepo-com.svg"
+                        src={icons.google}
                         alt="Google"
                         width="20"
                         height="20"

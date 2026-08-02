@@ -1,11 +1,12 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { productImages } from '../assets/images';
 
 const flashSaleItems = [
   {
     productId: 'higgs-game-island',
     name: 'Higgs Game Island',
     meta: 'Tukar Kartu (1B)',
-    image: '/gassets/product/higgs-game-island.webp',
+    image: productImages['higgs-game-island'],
     originalPrice: 'Rp 64.000',
     price: 'Rp 63.360'
   },
@@ -13,7 +14,7 @@ const flashSaleItems = [
     productId: 'higgs-game-island',
     name: 'Higgs Game Island',
     meta: 'Tukar Kartu (2B)',
-    image: '/gassets/product/higgs-game-island.webp',
+    image: productImages['higgs-game-island'],
     originalPrice: 'Rp 128.000',
     price: 'Rp 126.720'
   },
@@ -21,7 +22,7 @@ const flashSaleItems = [
     productId: 'higgs-game-island',
     name: 'Higgs Game Island',
     meta: 'Tukar Kartu (3B)',
-    image: '/gassets/product/higgs-game-island.webp',
+    image: productImages['higgs-game-island'],
     originalPrice: 'Rp 192.000',
     price: 'Rp 190.080'
   },
@@ -29,7 +30,7 @@ const flashSaleItems = [
     productId: 'mobile-legend',
     name: 'Mobile Legend',
     meta: '250 Diamonds',
-    image: '/gassets/product/mobile-legend.webp',
+    image: productImages['mobile-legend'],
     originalPrice: 'Rp 77.000',
     price: 'Rp 69.300'
   },
@@ -37,7 +38,7 @@ const flashSaleItems = [
     productId: 'free-fire',
     name: 'Free Fire',
     meta: '355 Diamonds',
-    image: '/gassets/product/free-fire.webp',
+    image: productImages['free-fire'],
     originalPrice: 'Rp 55.000',
     price: 'Rp 49.500'
   },
@@ -45,7 +46,7 @@ const flashSaleItems = [
     productId: 'valorant',
     name: 'Valorant',
     meta: '1000 VP',
-    image: '/gassets/product/valorant.webp',
+    image: productImages['valorant'],
     originalPrice: 'Rp 120.000',
     price: 'Rp 108.000'
   }

@@ -1,8 +1,9 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import Banner from '../components/Banner';
 import FlashSale from '../components/FlashSale';
 import Categories from '../components/Categories';
 import { products } from '../data/products';
+import { bannerImages } from '../assets/images';
 
 export default function HomeView({ onSelectProduct }) {
   const [activeCategory, setActiveCategory] = useState('popular');
@@ -104,7 +105,7 @@ export default function HomeView({ onSelectProduct }) {
           <div className="news-card-track">
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
               <div className="news-card-thumb">
-                <img src="/gassets/banner/slide_1769171315.webp" alt="News 1" />
+                <img src={bannerImages[4]} alt="News 1" />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Promo Diamond Mobile Legends Merdeka 2026</h4>
@@ -114,7 +115,7 @@ export default function HomeView({ onSelectProduct }) {
             </a>
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
               <div className="news-card-thumb">
-                <img src="/gassets/banner/slide_1773165603.webp" alt="News 2" />
+                <img src={bannerImages[5]} alt="News 2" />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Event Top Up Free Fire x Spider-Man</h4>
@@ -124,7 +125,7 @@ export default function HomeView({ onSelectProduct }) {
             </a>
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
               <div className="news-card-thumb">
-                <img src="/gassets/banner/slide_1767514787.webp" alt="News 3" />
+                <img src={bannerImages[3]} alt="News 3" />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Tips Aman Top Up Akun Game Online</h4>
