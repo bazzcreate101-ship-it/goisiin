@@ -20,6 +20,11 @@ import {
   settleWalletEffectsForTransaction,
   updateWithdrawalStatus,
 } from '../lib/walletService';
+import {
+  countLowStockItems,
+  hasManagedStock,
+  restockLowStockProduct,
+} from '../lib/productStock';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -34,9 +39,6 @@ const initialCategories = [
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 const cleanAdminText = (value, limit = 160) => String(value ?? '').trim().replace(/[<>`{}]/g, '').slice(0, limit);
-const randomRestockValue = () => Math.floor(Math.random() * 18) + 8;
-const hasManagedStock = (product) => product.denominations?.some((denom) => Number.isFinite(Number(denom.stock)));
-const countLowStockItems = (product) => product.denominations?.filter((denom) => Number.isFinite(Number(denom.stock)) && Number(denom.stock) < 3).length || 0;
 
 export default function AdminDashboard({ products, onUpdateProducts, adminUser, onLogout }) {
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'transactions' | 'users' | 'chats'
@@ -233,19 +235,6 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     const updated = products.map((product) => ({ ...product, active: true }));
     onUpdateProducts(updated);
     setProductAdminNotice('Semua produk sudah diaktifkan.');
-  };
-
-  const restockLowStockProduct = (product) => {
-    let changed = 0;
-    const denominations = product.denominations.map((denom) => {
-      const currentStock = Number(denom.stock);
-      if (Number.isFinite(currentStock) && currentStock < 3) {
-        changed += 1;
-        return { ...denom, stock: randomRestockValue() };
-      }
-      return denom;
-    });
-    return { product: { ...product, denominations }, changed };
   };
 
   const handleAutoRestockProduct = (productId) => {

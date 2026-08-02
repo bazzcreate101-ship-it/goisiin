@@ -4,6 +4,7 @@ import { readStorageList, writeStorageList } from '../lib/storage';
 import { buildDynamicQrisPayload, makeRetailBarcodeValue } from '../lib/qris';
 import { debitWalletForPurchase, getWalletBalance } from '../lib/walletService';
 import { awardStampForTransaction } from '../lib/stampService';
+import { decrementProductStock } from '../lib/productStock';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 const cleanInput = (value, type) => {
@@ -12,7 +13,7 @@ const cleanInput = (value, type) => {
   return trimmed.replace(/[<>`{}]/g, '');
 };
 
-export default function OrderView({ productId, products, onNavigate, user, onLoginOpen }) {
+export default function OrderView({ productId, products, onNavigate, user, onLoginOpen, onUpdateProducts }) {
   const product = products.find(p => p.id === productId && p.active !== false);
 
   const [formData, setFormData] = useState({});
@@ -159,6 +160,10 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
       const list = readStorageList('goisiin_transactions');
       list.unshift(invoiceData);
       writeStorageList('goisiin_transactions', list);
+      const stockResult = decrementProductStock(products, product.id, selectedDenom.id);
+      if (stockResult.changed) {
+        onUpdateProducts?.(stockResult.products);
+      }
 
       setIsSubmitting(false);
       onNavigate('invoice', invoiceData);

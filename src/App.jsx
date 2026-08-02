@@ -22,6 +22,7 @@ import {
   readUserTransactions,
   safeJsonParse,
 } from './lib/storage';
+import { autoRestockProducts } from './lib/productStock';
 
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
 
@@ -79,9 +80,14 @@ function App() {
   const [adminUser, setAdminUser] = useState(null);
   const [adminChecking, setAdminChecking] = useState(() => initialRoute.view === 'admin');
 
-  const [products, setProducts] = useState(() => (
-    normalizeStoredProducts(localStorage.getItem('goisiin_products'), initialProducts)
-  ));
+  const [products, setProducts] = useState(() => {
+    const normalizedProducts = normalizeStoredProducts(localStorage.getItem('goisiin_products'), initialProducts);
+    const restocked = autoRestockProducts(normalizedProducts);
+    if (restocked.changed > 0) {
+      localStorage.setItem('goisiin_products', JSON.stringify(restocked.products));
+    }
+    return restocked.products;
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -233,9 +239,27 @@ function App() {
   };
 
   const handleUpdateProducts = (newProducts) => {
-    setProducts(newProducts);
-    localStorage.setItem('goisiin_products', JSON.stringify(newProducts));
+    const restocked = autoRestockProducts(newProducts);
+    setProducts(restocked.products);
+    localStorage.setItem('goisiin_products', JSON.stringify(restocked.products));
   };
+
+  useEffect(() => {
+    const runAutoRestock = () => {
+      setProducts((currentProducts) => {
+        const restocked = autoRestockProducts(currentProducts);
+        if (restocked.changed > 0) {
+          localStorage.setItem('goisiin_products', JSON.stringify(restocked.products));
+          return restocked.products;
+        }
+        return currentProducts;
+      });
+    };
+
+    runAutoRestock();
+    const timer = setInterval(runAutoRestock, 30 * 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleNavigate = (view, data) => {
     if (view === 'home') {
@@ -357,6 +381,7 @@ function App() {
             onNavigate={handleNavigate}
             user={user}
             onLoginOpen={() => setIsLoginOpen(true)}
+            onUpdateProducts={handleUpdateProducts}
           />
         )}
         {currentView === 'invoice' && (
