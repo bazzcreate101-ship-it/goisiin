@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -7,7 +7,7 @@ const initialCategories = [
   { id: '6', name: 'E-Wallet' }
 ];
 
-export default function AdminDashboard({ products, onUpdateProducts, onNavigate }) {
+export default function AdminDashboard({ products, onUpdateProducts, onNavigate, adminUser, onLogout }) {
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'chats'
   
   // Product state
@@ -213,12 +213,17 @@ export default function AdminDashboard({ products, onUpdateProducts, onNavigate 
               🛡️ Dashboard Admin Goisiin
             </h2>
             <p className="text-secondary mb-0" style={{ fontSize: '0.86rem' }}>
-              Kelola produk, edit harga koin, serta jawab obrolan customer secara live.
+              Halo, <strong style={{ color: '#4ade80' }}>{adminUser?.name || 'Admin'}</strong> — Kelola produk & jawab chat customer.
             </p>
           </div>
-          <button className="btn btn-outline-success btn-sm" onClick={() => onNavigate('home', null)}>
-            <i className="bi bi-house-fill me-1"></i> Lihat Toko
-          </button>
+          <div className="d-flex gap-2">
+            <button className="btn btn-outline-success btn-sm" onClick={() => window.open('/', '_blank')}>
+              <i className="bi bi-house-fill me-1"></i> Lihat Toko
+            </button>
+            <button className="btn btn-outline-danger btn-sm" onClick={onLogout}>
+              <i className="bi bi-box-arrow-right me-1"></i> Logout
+            </button>
+          </div>
         </div>
 
         {/* Tab Buttons */}

@@ -1,6 +1,7 @@
 {
-  "cleanUrls": true,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/bolehnihadmin", "destination": "/index.html" },
+    { "source": "/bolehnihadmin/(.*)", "destination": "/index.html" },
+    { "source": "/((?!gassets/).*)", "destination": "/index.html" }
   ]
 }
