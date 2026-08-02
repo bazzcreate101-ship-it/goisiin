@@ -105,7 +105,7 @@ export default function HomeView({ onSelectProduct }) {
           <div className="news-card-track">
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
               <div className="news-card-thumb">
-                <img src={bannerImages[4]} alt="News 1" />
+                <img src={bannerImages[0]} alt="News 1" />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Promo Diamond Mobile Legends Merdeka 2026</h4>
@@ -115,7 +115,7 @@ export default function HomeView({ onSelectProduct }) {
             </a>
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
               <div className="news-card-thumb">
-                <img src={bannerImages[5]} alt="News 2" />
+                <img src={bannerImages[1]} alt="News 2" />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Event Top Up Free Fire x Spider-Man</h4>
@@ -125,7 +125,7 @@ export default function HomeView({ onSelectProduct }) {
             </a>
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
               <div className="news-card-thumb">
-                <img src={bannerImages[3]} alt="News 3" />
+                <img src={bannerImages[2]} alt="News 3" />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Tips Aman Top Up Akun Game Online</h4>

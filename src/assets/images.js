@@ -40,12 +40,10 @@ import rfImg from './product/rf-return.webp';
 import netflixImg from './product/netflix.webp';
 
 // --- BANNER IMAGES ---
-import banner1 from './banner/slide_1751769782.webp';
-import banner2 from './banner/slide_1753019433.webp';
-import banner3 from './banner/slide_1765284294.webp';
-import banner4 from './banner/slide_1767514787.webp';
-import banner5 from './banner/slide_1769171315.webp';
-import banner6 from './banner/slide_1773165603.webp';
+import banner1 from './banner/slide_1.png';
+import banner2 from './banner/slide_2.png';
+import banner3 from './banner/slide_3.png';
+import banner4 from './banner/slide_4.png';
 
 // --- ICON IMAGES ---
 import iconArticle from './icon/article-svgrepo-com.svg';
@@ -100,7 +98,7 @@ export const productImages = {
   'netflix': netflixImg,
 };
 
-export const bannerImages = [banner1, banner2, banner3, banner4, banner5, banner6];
+export const bannerImages = [banner1, banner2, banner3, banner4];
 
 export const icons = {
   article: iconArticle,
