@@ -103,7 +103,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
             <section className="auth-modal__intro" aria-labelledby="modalTitle">
               <div>
                 <span className="auth-modal__eyebrow">Selamat datang</span>
-                <h2 className="auth-modal__title" id="modalTitle">Masuk ke Garuda</h2>
+                <h2 className="auth-modal__title" id="modalTitle">Masuk ke Goisiin</h2>
                 <p className="auth-modal__subtitle">Pantau transaksi, kumpulkan hadiah, dan dapatkan bantuan lebih cepat.</p>
               </div>
               <ul className="auth-modal__perks">
@@ -132,7 +132,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
             <section className="auth-modal__cta" aria-label="Mulai login">
               <div className="auth-modal__cta-header">
                 <h3 className="auth-modal__cta-title">Login lebih cepat</h3>
-                <p className="auth-modal__cta-desc">Gunakan akun Google untuk pengalaman transaksi lebih nyaman di Garuda.</p>
+                <p className="auth-modal__cta-desc">Gunakan akun Google untuk pengalaman transaksi lebih nyaman di Goisiin.</p>
               </div>
 
               <div className="auth-modal__google">
@@ -166,7 +166,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               </div>
 
               <p className="auth-modal__terms">
-                Dengan masuk ke Garuda, kamu menyetujui{' '}
+                Dengan masuk ke Goisiin, kamu menyetujui{' '}
                 <a href="https://garudavoucher.id/page/terms" target="_blank" rel="noopener noreferrer">Syarat dan Ketentuan</a>{' '}
                 serta{' '}
                 <a href="https://garudavoucher.id/page/privacy" target="_blank" rel="noopener noreferrer">Kebijakan Privasi</a>.
@@ -178,3 +178,4 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
     </div>
   );
 }
+

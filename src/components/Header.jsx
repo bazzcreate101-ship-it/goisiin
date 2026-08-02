@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 
 export default function Header({ 
   currentView, 
@@ -27,7 +27,7 @@ export default function Header({
           
           {/* BRAND */}
           <a href="#" onClick={(e) => handleNavClick('home', e)} className="navbar-brand flex-shrink-1">
-            <img className="img-logo" src="/assets/logo.png" alt="Garuda Voucher Indonesia" />
+            <img className="img-logo" src="/assets/logo.png" alt="Goisiin Indonesia" />
           </a>
 
           {/* MENU UTAMA */}
@@ -109,7 +109,7 @@ export default function Header({
                           <div className="wallet-icon">🪙</div>
                           <div className="wallet-meta">
                             <div className="wallet-title">G-Coin</div>
-                            <div className="wallet-value text-warning">15.000</div>
+                            <div className="wallet-value text-success">15.000</div>
                           </div>
                         </div>
                         <div className="wallet-tile tile-gp">
@@ -148,7 +148,7 @@ export default function Header({
               <>
                 <button 
                   type="button" 
-                  className="btn btn-outline-warning btn-sm d-inline-flex" 
+                  className="btn btn-outline-success btn-sm d-inline-flex" 
                   onClick={onOpenLogin}
                 >
                   Login
@@ -172,3 +172,4 @@ export default function Header({
     </header>
   );
 }
+

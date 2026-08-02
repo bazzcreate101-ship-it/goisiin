@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { products } from '../data/products';
 
 export default function SearchPanel({ isOpen, onClose, onSelectProduct }) {
@@ -101,3 +101,4 @@ export default function SearchPanel({ isOpen, onClose, onSelectProduct }) {
     </div>
   );
 }
+

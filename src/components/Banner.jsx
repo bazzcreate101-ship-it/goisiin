@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 
 const bannerImages = [
   "/assets/banner/slide_1769171315.webp",
@@ -53,7 +53,7 @@ export default function Banner() {
                 width: index === activeIndex ? '28px' : '8px',
                 height: '8px',
                 borderRadius: '999px',
-                backgroundColor: index === activeIndex ? '#ffc107' : 'rgba(255, 255, 255, 0.4)',
+                backgroundColor: index === activeIndex ? '#6aaa4a' : 'rgba(255, 255, 255, 0.4)',
                 transition: 'all 0.3s ease'
               }}
               aria-label={`Slide ${index + 1}`}
@@ -64,3 +64,4 @@ export default function Banner() {
     </div>
   );
 }
+

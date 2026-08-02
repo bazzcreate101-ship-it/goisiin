@@ -1,4 +1,4 @@
-export const categories = [
+﻿export const categories = [
   { id: 'popular', name: 'Populer' },
   { id: '1', name: 'Top up Game' },
   { id: '2', name: 'Voucher Game' },
@@ -373,3 +373,4 @@ export const paymentChannels = [
     feeFlat: 3500
   }
 ];
+

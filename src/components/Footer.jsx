@@ -1,21 +1,21 @@
-import React from 'react';
+﻿import React from 'react';
 
 const paymentLogos = [
-  "https://garudavoucher.id/assets/img/logo-payment/qris.png",
-  "https://garudavoucher.id/assets/img/logo-payment/dana.png",
-  "https://garudavoucher.id/assets/img/logo-payment/gopay.png",
-  "https://garudavoucher.id/assets/img/logo-payment/ovo.png",
-  "https://garudavoucher.id/assets/img/logo-payment/shopeepay.png",
-  "https://garudavoucher.id/assets/img/logo-payment/linkaja.png",
-  "https://garudavoucher.id/assets/img/logo-payment/bca.png",
-  "https://garudavoucher.id/assets/img/logo-payment/bri.png",
-  "https://garudavoucher.id/assets/img/logo-payment/mandiri.png",
-  "https://garudavoucher.id/assets/img/logo-payment/bni.png",
-  "https://garudavoucher.id/assets/img/logo-payment/bsi.png",
-  "https://garudavoucher.id/assets/img/logo-payment/cimb.png",
-  "https://garudavoucher.id/assets/img/logo-payment/permatabank.png",
-  "https://garudavoucher.id/assets/img/logo-payment/alfamart.png",
-  "https://garudavoucher.id/assets/img/logo-payment/indomaret.png"
+  "/assets/payment/qris.svg",
+  "/assets/payment/dana.svg",
+  "/assets/payment/gopay.svg",
+  "/assets/payment/ovo.svg",
+  "/assets/payment/shopeepay.svg",
+  "/assets/payment/linkaja.svg",
+  "/assets/payment/bca.svg",
+  "/assets/payment/bri.svg",
+  "/assets/payment/mandiri.svg",
+  "/assets/payment/bni.svg",
+  "/assets/payment/bsi.svg",
+  "/assets/payment/cimb.svg",
+  "/assets/payment/permatabank.svg",
+  "/assets/payment/alfamart.svg",
+  "/assets/payment/indomaret.svg"
 ];
 
 export default function Footer({ onNavigate }) {
@@ -25,7 +25,7 @@ export default function Footer({ onNavigate }) {
         <div className="row">
           
           <div className="col-md-3 col-12 text-start" style={{ marginTop: '20px' }}>
-            <h3 className="title-footer">GARUDAVOUCHER</h3>
+            <h3 className="title-footer">GOISIIN</h3>
             <p className="faq-body">
               Platform Voucher Game dan Topup Game <b>Free Fire, Mobile Legends, Garena Shell, Steam Wallet</b> dan masih banyak lainnya dengan pembayaran yang sangat lengkap <b>QRIS dan E-Wallet</b> didukung oleh Customer Service 24 Jam.
             </p>
@@ -73,9 +73,10 @@ export default function Footer({ onNavigate }) {
         </div>
 
         <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} Garuda Voucher. Seluruh hak cipta dilindungi undang-undang.</p>
+          <p>© {new Date().getFullYear()} Goisiin. Seluruh hak cipta dilindungi undang-undang.</p>
         </div>
       </div>
     </footer>
   );
 }
+

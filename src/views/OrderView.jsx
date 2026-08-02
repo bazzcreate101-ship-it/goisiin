@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { products, paymentChannels } from '../data/products';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
@@ -17,8 +17,8 @@ export default function OrderView({ productId, onNavigate }) {
   if (!product) {
     return (
       <div className="container col-md-8 col-12 py-5 text-center">
-        <h3 className="text-warning">Produk tidak ditemukan</h3>
-        <button className="btn btn-warning mt-3" onClick={() => onNavigate('home', null)}>Kembali ke Beranda</button>
+        <h3 className="text-success">Produk tidak ditemukan</h3>
+        <button className="btn btn-success mt-3" onClick={() => onNavigate('home', null)}>Kembali ke Beranda</button>
       </div>
     );
   }
@@ -98,7 +98,7 @@ export default function OrderView({ productId, onNavigate }) {
         <nav aria-label="breadcrumb">
           <ol className="breadcrumb m-0" style={{ fontSize: '0.82rem' }}>
             <li className="breadcrumb-item">
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('home', null); }} className="text-warning text-decoration-none">Beranda</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('home', null); }} className="text-success text-decoration-none">Beranda</a>
             </li>
             <li className="breadcrumb-item active text-secondary">{product.name}</li>
           </ol>
@@ -163,7 +163,7 @@ export default function OrderView({ productId, onNavigate }) {
                     <div className="col-12">
                       <div className="nick-preview-bar">
                         <i className="bi bi-person-check-fill text-success me-2"></i>
-                        Nickname: <strong className="text-warning ms-1">{nickPreview}</strong>
+                        Nickname: <strong className="text-success ms-1">{nickPreview}</strong>
                       </div>
                     </div>
                   )}
@@ -245,7 +245,7 @@ export default function OrderView({ productId, onNavigate }) {
 
                   <div className="order-summary-row">
                     <span>Produk</span>
-                    <span className="text-warning">{product.name}</span>
+                    <span className="text-success">{product.name}</span>
                   </div>
                   <div className="order-summary-row">
                     <span>Nominal</span>
@@ -262,12 +262,12 @@ export default function OrderView({ productId, onNavigate }) {
                   <hr className="order-summary-divider" />
                   <div className="order-summary-row order-summary-row--total">
                     <span>Total</span>
-                    <span className="text-warning fw-bold">{selectedDenom && selectedPayment ? formatRupiah(calcTotal()) : '-'}</span>
+                    <span className="text-success fw-bold">{selectedDenom && selectedPayment ? formatRupiah(calcTotal()) : '-'}</span>
                   </div>
 
                   <button
                     type="submit"
-                    className="btn btn-warning w-100 mt-3 fw-bold"
+                    className="btn btn-success w-100 mt-3 fw-bold"
                     disabled={isSubmitting}
                     id="btn-checkout"
                   >
@@ -288,7 +288,7 @@ export default function OrderView({ productId, onNavigate }) {
                 </div>
 
                 <div className="order-card mt-3" style={{ fontSize: '0.83rem', color: '#9ca3af' }}>
-                  <h6 className="text-warning mb-2">
+                  <h6 className="text-success mb-2">
                     <i className="bi bi-info-circle-fill me-1"></i>Info Penting
                   </h6>
                   <ul className="ps-3 mb-0">
@@ -305,3 +305,4 @@ export default function OrderView({ productId, onNavigate }) {
     </div>
   );
 }
+

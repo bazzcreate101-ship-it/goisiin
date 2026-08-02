@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import Banner from '../components/Banner';
 import FlashSale from '../components/FlashSale';
 import Categories from '../components/Categories';
@@ -38,7 +38,7 @@ export default function HomeView({ onSelectProduct }) {
             <div className="col-lg-12 col-12" id="populerContent">
               <div
                 className="card-header d-flex justify-content-between mb-3"
-                style={{ backgroundColor: 'rgb(38,38,38)', color: '#ffc107', padding: '10px 16px', borderRadius: '8px' }}
+                style={{ backgroundColor: 'rgb(38,38,38)', color: '#6aaa4a', padding: '10px 16px', borderRadius: '8px' }}
               >
                 <h3 className="p-0 m-0" style={{ fontSize: '1.1rem' }}>
                   <b>{activeCategory === 'popular' ? 'Populer' : 'Daftar Produk'}</b>
@@ -94,7 +94,7 @@ export default function HomeView({ onSelectProduct }) {
           <div className="news-section-header">
             <div className="news-section-title">
               <span>Berita</span>
-              <h3>Update terbaru dari Garuda Voucher</h3>
+              <h3>Update terbaru dari Goisiin</h3>
               <p className="news-section-subtitle">Dapatkan tips, promo, dan highlight komunitas setiap minggunya.</p>
             </div>
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noopener noreferrer" className="news-section-link">
@@ -108,7 +108,7 @@ export default function HomeView({ onSelectProduct }) {
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Promo Diamond Mobile Legends Merdeka 2026</h4>
-                <p className="news-card-description">Rayakan bulan kemerdekaan dengan promo diskon up to 15% top up Diamond Mobile Legends hanya di Garuda Voucher!</p>
+                <p className="news-card-description">Rayakan bulan kemerdekaan dengan promo diskon up to 15% top up Diamond Mobile Legends hanya di Goisiin!</p>
                 <span className="news-card-cta">Baca selengkapnya &rarr;</span>
               </div>
             </a>
@@ -118,7 +118,7 @@ export default function HomeView({ onSelectProduct }) {
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Event Top Up Free Fire x Spider-Man</h4>
-                <p className="news-card-description">Dapatkan token eksklusif kolaborasi FF x Spider-Man dengan melakukan top up minimal 100 Diamonds di Garuda Voucher.</p>
+                <p className="news-card-description">Dapatkan token eksklusif kolaborasi FF x Spider-Man dengan melakukan top up minimal 100 Diamonds di Goisiin.</p>
                 <span className="news-card-cta">Baca selengkapnya &rarr;</span>
               </div>
             </a>
@@ -144,7 +144,7 @@ export default function HomeView({ onSelectProduct }) {
                   <span className="gvx-faq-badge">FAQ</span>
                   <h2 id="faqTitle" className="gvx-faq-title">Hal yang paling sering ditanyakan</h2>
                 </div>
-                <p className="gvx-faq-copy">Temukan jawaban singkat terkait pengalaman top up, opsi pembayaran, hingga cara mendapatkan bantuan dari tim Garuda Voucher.</p>
+                <p className="gvx-faq-copy">Temukan jawaban singkat terkait pengalaman top up, opsi pembayaran, hingga cara mendapatkan bantuan dari tim Goisiin.</p>
                 <div className="gvx-faq-chips" role="list">
                   <span className="gvx-faq-chip" role="listitem">Dukungan 24/7</span>
                   <span className="gvx-faq-chip" role="listitem">Transaksi Anti Ribet</span>
@@ -174,20 +174,20 @@ export default function HomeView({ onSelectProduct }) {
                 <div className="accordion-item">
                   <h3 className="accordion-header" id="faqHeadingOne">
                     <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseOne" aria-expanded="false" aria-controls="faqCollapseOne">
-                      <span className="gvx-faq-question">Apa itu Garuda Voucher?</span>
+                      <span className="gvx-faq-question">Apa itu Goisiin?</span>
                       <span className="gvx-faq-toggle" aria-hidden="true"></span>
                     </button>
                   </h3>
                   <div id="faqCollapseOne" className="accordion-collapse collapse" aria-labelledby="faqHeadingOne" data-bs-parent="#faqAccordion">
                     <div className="accordion-body gvx-faq-body">
-                      <strong>Garuda Voucher</strong> merupakan tempat terpercaya untuk kamu beli voucher game dan juga top up game. Kami menyediakan banyak sekali game terkenal seperti Free Fire, Mobile Legends, Genshin Impact, PUBG, Valorant dan kamu masih bisa menemukan lebih dari 100+ game.
+                      <strong>Goisiin</strong> merupakan tempat terpercaya untuk kamu beli voucher game dan juga top up game. Kami menyediakan banyak sekali game terkenal seperti Free Fire, Mobile Legends, Genshin Impact, PUBG, Valorant dan kamu masih bisa menemukan lebih dari 100+ game.
                     </div>
                   </div>
                 </div>
                 <div className="accordion-item">
                   <h3 className="accordion-header" id="faqHeadingTwo">
                     <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseTwo" aria-expanded="false" aria-controls="faqCollapseTwo">
-                      <span className="gvx-faq-question">Kenapa memilih Garuda Voucher?</span>
+                      <span className="gvx-faq-question">Kenapa memilih Goisiin?</span>
                       <span className="gvx-faq-toggle" aria-hidden="true"></span>
                     </button>
                   </h3>
@@ -234,7 +234,7 @@ export default function HomeView({ onSelectProduct }) {
                   <span className="heading-lead">Tempat top up voucher game murah,</span>
                   <span className="heading-accent">Beli voucher game sekarang!</span>
                 </h1>
-                <p className="main-description-copy">Garuda Voucher adalah tempat terbaik untuk top up game yang menyediakan banyak pilihan voucher. Kamu ingin beli diamond atau voucher hiburan? Semua bisa kamu dapatkan di sini. Proses top up-nya gampang dan metode pembayarannya lengkap. Yuk, beli voucher game di Garuda Voucher dan dapatkan peluang bonus voucher!</p>
+                <p className="main-description-copy">Goisiin adalah tempat terbaik untuk top up game yang menyediakan banyak pilihan voucher. Kamu ingin beli diamond atau voucher hiburan? Semua bisa kamu dapatkan di sini. Proses top up-nya gampang dan metode pembayarannya lengkap. Yuk, beli voucher game di Goisiin dan dapatkan peluang bonus voucher!</p>
               </div>
             </div>
           </div>
@@ -244,3 +244,4 @@ export default function HomeView({ onSelectProduct }) {
     </div>
   );
 }
+

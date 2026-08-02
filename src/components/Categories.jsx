@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { categories } from '../data/products';
 
 export default function Categories({ activeCategory, onSelectCategory }) {
@@ -14,13 +14,13 @@ export default function Categories({ activeCategory, onSelectCategory }) {
                 id={cat.id === 'popular' ? 'popularButton' : `catButton_${cat.id}`}
                 className={`text-uppercase btn button-size font-weight-bolder ${
                   isActive 
-                    ? 'btn-warning text-dark' 
-                    : 'btn-outline-warning text-white'
+                    ? 'btn-success text-dark' 
+                    : 'btn-outline-success text-white'
                 }`}
                 style={{ 
                   backgroundColor: isActive ? '#ffc008' : 'transparent',
-                  color: isActive ? '#000' : '#ffc107',
-                  border: '1px solid #ffc107',
+                  color: isActive ? '#000' : '#6aaa4a',
+                  border: '1px solid #6aaa4a',
                   marginRight: '6px'
                 }}
                 type="button"
@@ -35,3 +35,4 @@ export default function Categories({ activeCategory, onSelectCategory }) {
     </div>
   );
 }
+

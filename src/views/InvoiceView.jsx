@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
@@ -24,8 +24,8 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
   if (!invoiceData) {
     return (
       <div className="container col-md-8 col-12 py-5 text-center">
-        <h3 className="text-warning">Invoice tidak ditemukan</h3>
-        <button className="btn btn-warning mt-3" onClick={() => onNavigate('home', null)}>Kembali ke Beranda</button>
+        <h3 className="text-success">Invoice tidak ditemukan</h3>
+        <button className="btn btn-success mt-3" onClick={() => onNavigate('home', null)}>Kembali ke Beranda</button>
       </div>
     );
   }
@@ -51,10 +51,10 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
         <nav aria-label="breadcrumb">
           <ol className="breadcrumb m-0" style={{ fontSize: '0.82rem' }}>
             <li className="breadcrumb-item">
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('home', null); }} className="text-warning text-decoration-none">Beranda</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('home', null); }} className="text-success text-decoration-none">Beranda</a>
             </li>
             <li className="breadcrumb-item">
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('order', null); }} className="text-warning text-decoration-none">{invoiceData.productName}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('order', null); }} className="text-success text-decoration-none">{invoiceData.productName}</a>
             </li>
             <li className="breadcrumb-item active text-secondary">Invoice</li>
           </ol>
@@ -93,7 +93,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
             {paymentStatus === 'checking' && (
               <div className="invoice-status-card invoice-status-card--checking mb-3">
                 <div className="invoice-status-icon">
-                  <span className="spinner-border text-warning" role="status"></span>
+                  <span className="spinner-border text-success" role="status"></span>
                 </div>
                 <div>
                   <h5>Mengecek Status Pembayaran...</h5>
@@ -119,7 +119,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
               <div className="invoice-rows">
                 <div className="invoice-row">
                   <span className="invoice-label">Produk</span>
-                  <span className="invoice-value text-warning">{invoiceData.productName}</span>
+                  <span className="invoice-value text-success">{invoiceData.productName}</span>
                 </div>
                 <div className="invoice-row">
                   <span className="invoice-label">Nominal</span>
@@ -148,7 +148,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
                 </div>
                 <div className="invoice-row invoice-row--total">
                   <span className="invoice-label fw-bold">Total Bayar</span>
-                  <span className="invoice-value text-warning fw-bold">{formatRupiah(invoiceData.total)}</span>
+                  <span className="invoice-value text-success fw-bold">{formatRupiah(invoiceData.total)}</span>
                 </div>
               </div>
 
@@ -177,7 +177,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
             <div className="d-flex gap-2 mt-3 flex-wrap">
               {paymentStatus === 'pending' && (
                 <button
-                  className="btn btn-warning flex-grow-1 fw-bold"
+                  className="btn btn-success flex-grow-1 fw-bold"
                   onClick={handleCheckStatus}
                   id="btn-check-status"
                 >
@@ -187,7 +187,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
               )}
               {(paymentStatus === 'success' || paymentStatus === 'failed') && (
                 <button
-                  className="btn btn-warning flex-grow-1 fw-bold"
+                  className="btn btn-success flex-grow-1 fw-bold"
                   onClick={() => onNavigate('home', null)}
                 >
                   <i className="bi bi-house-fill me-2"></i>
@@ -210,3 +210,4 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
     </div>
   );
 }
+
