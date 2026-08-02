@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { logo } from '../assets/images';
+import { getStampSummary } from '../lib/stampService';
+import { readStorageList } from '../lib/storage';
 
 export default function Header({ 
   currentView, 
@@ -12,6 +14,10 @@ export default function Header({
 }) {
   const isLoggedIn = !!user;
   const userProfile = user;
+  const userTransactions = isLoggedIn ? readStorageList('goisiin_transactions').filter((tx) => tx.userEmail === user.email) : [];
+  const successTransactions = userTransactions.filter((tx) => tx.status === 'success');
+  const userPoints = successTransactions.reduce((sum, tx) => sum + Number(tx.points || 0), 0);
+  const stampSummary = isLoggedIn ? getStampSummary(user.email) : null;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -117,20 +123,23 @@ export default function Header({
                     src={userProfile?.picture || "https://lh3.googleusercontent.com/a/default-user=s100"} 
                     alt="Profile" 
                     className="profile_img" 
+                    onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
                   />
                 </button>
                 
                 {profileDropdownOpen && (
                   <div className="dropdown-menu glass-dd show d-block" style={{ position: 'absolute', right: 0, top: '42px' }}>
-                    <div className="dd-header">
+                    <div className="dd-header dd-header--profile">
                       <img 
                         src={userProfile?.picture || "https://lh3.googleusercontent.com/a/default-user=s100"} 
                         alt="Avatar" 
                         className="dd-avatar" 
+                        onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
                       />
                       <div className="dd-userblock">
-                        <span className="dd-email fw-bold">{userProfile?.name}</span>
+                        <span className="dd-email fw-bold">{userProfile?.name || 'Member Goisiin'}</span>
                         <span className="small text-secondary" style={{ fontSize: '0.78rem' }}>{userProfile?.email}</span>
+                        <span className="dd-member-badge">Member Goisiin</span>
                       </div>
                     </div>
                     
@@ -140,15 +149,29 @@ export default function Header({
                           <div className="wallet-icon">🪙</div>
                           <div className="wallet-meta">
                             <div className="wallet-title">G-Coin</div>
-                            <div className="wallet-value text-success">15.000</div>
+                            <div className="wallet-value text-success">0</div>
                           </div>
                         </div>
                         <div className="wallet-tile tile-gp">
                           <div className="wallet-icon">🎁</div>
                           <div className="wallet-meta">
                             <div className="wallet-title">Poin</div>
-                            <div className="wallet-value text-info">320</div>
+                            <div className="wallet-value text-info">{userPoints.toLocaleString('id-ID')}</div>
                           </div>
+                        </div>
+                      </div>
+                      <div className="profile-mini-stats">
+                        <div>
+                          <strong>{stampSummary?.unique || 0}/6</strong>
+                          <span>Stamp unik</span>
+                        </div>
+                        <div>
+                          <strong>{userTransactions.length}</strong>
+                          <span>Transaksi</span>
+                        </div>
+                        <div>
+                          <strong>{successTransactions.length}</strong>
+                          <span>Sukses</span>
                         </div>
                       </div>
                       

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { paymentChannels } from '../data/products';
 import { readStorageList, writeStorageList } from '../lib/storage';
+import { buildDynamicQrisPayload, makeRetailBarcodeValue } from '../lib/qris';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 const cleanInput = (value, type) => {
@@ -9,7 +10,7 @@ const cleanInput = (value, type) => {
   return trimmed.replace(/[<>`{}]/g, '');
 };
 
-export default function OrderView({ productId, products, onNavigate, user }) {
+export default function OrderView({ productId, products, onNavigate, user, onLoginOpen }) {
   const product = products.find(p => p.id === productId);
 
   const [formData, setFormData] = useState({});
@@ -19,6 +20,7 @@ export default function OrderView({ productId, products, onNavigate, user }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [nickPreview, setNickPreview] = useState('');
+  const [paymentNotice, setPaymentNotice] = useState('');
 
   if (!product) {
     return (
@@ -78,30 +80,52 @@ export default function OrderView({ productId, products, onNavigate, user }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (isSubmitting) return;
+    if (!user?.email) {
+      setPaymentNotice('Login dulu untuk melanjutkan pembayaran dan menyimpan riwayat transaksi.');
+      onLoginOpen?.();
+      return;
+    }
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
+    if (!['qris', 'indomaret'].includes(selectedPayment.id)) {
+      setIsSubmitting(true);
+      setPaymentNotice('');
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setPaymentNotice('Metode pembayaran ini sedang gangguan. Silakan coba beberapa saat lagi atau pilih metode lain.');
+      }, 1200);
+      return;
+    }
     setIsSubmitting(true);
     // Small delay to simulate request
     setTimeout(() => {
+      const invoiceId = 'GSI-' + Date.now().toString().slice(-8).toUpperCase();
+      const total = calcTotal();
       const invoiceData = {
-        invoiceId: 'GRV-' + Date.now().toString().slice(-8).toUpperCase(),
+        invoiceId,
         productId: product.id,
         productName: product.name,
         productImage: product.image,
         denomination: selectedDenom.name,
         userId: product.inputFields.map(field => cleanInput(formData[field.name], field.type)).join(' / '),
         nick: nickPreview || 'User',
+        paymentId: selectedPayment.id,
+        paymentCategory: selectedPayment.category,
         paymentMethod: selectedPayment.name,
         paymentImage: selectedPayment.image,
         subtotal: selectedDenom.price,
         fee: calcFee(),
-        total: calcTotal(),
+        total,
+        points: Number(selectedDenom.points || 0),
         createdAt: new Date().toLocaleString('id-ID'),
+        expiresAt: Date.now() + 60 * 60 * 1000,
         status: 'pending',
-        userEmail: user?.email || null
+        userEmail: user.email,
+        qrisPayload: selectedPayment.id === 'qris' ? buildDynamicQrisPayload(total) : null,
+        retailBarcode: selectedPayment.id === 'indomaret' ? makeRetailBarcodeValue(invoiceId) : null,
       };
 
       // Simpan transaksi ke localStorage
@@ -232,6 +256,7 @@ export default function OrderView({ productId, products, onNavigate, user }) {
                   Pilih Metode Pembayaran
                 </h5>
                 {errors.payment && <div className="alert alert-danger py-1 px-2 mb-2" style={{ fontSize: '0.83rem' }}>{errors.payment}</div>}
+                {paymentNotice && <div className="alert alert-warning py-2 px-3 mb-2" style={{ fontSize: '0.84rem' }}>{paymentNotice}</div>}
 
                 {/* Category Tabs */}
                 <div className="payment-tabs mb-3">

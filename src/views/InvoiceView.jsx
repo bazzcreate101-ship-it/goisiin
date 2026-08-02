@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { safeJsonParse } from '../lib/storage';
 import { awardStampForTransaction } from '../lib/stampService';
+import { buildDynamicQrisPayload } from '../lib/qris';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
 export default function InvoiceView({ invoiceData, onNavigate }) {
-  const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(() => Math.max(0, Math.floor(((invoiceData?.expiresAt || Date.now() + 60 * 60 * 1000) - Date.now()) / 1000)));
   const [paymentStatus, setPaymentStatus] = useState('pending'); // 'pending' | 'checking' | 'success' | 'failed'
+  const [qrisDataUrl, setQrisDataUrl] = useState('');
 
   // Sync status on mount/update
   useEffect(() => {
@@ -23,12 +26,31 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
     }
   }, [invoiceData]);
 
+  useEffect(() => {
+    let alive = true;
+    if (invoiceData?.paymentId === 'qris') {
+      const payload = invoiceData.qrisPayload || buildDynamicQrisPayload(invoiceData.total);
+      QRCode.toDataURL(payload, {
+        errorCorrectionLevel: 'M',
+        margin: 1,
+        width: 340,
+        color: { dark: '#000000', light: '#ffffff' },
+      }).then((url) => {
+        if (alive) setQrisDataUrl(url);
+      }).catch(() => {
+        if (alive) setQrisDataUrl('/gassets/payment/qris-cropped.png');
+      });
+    }
+    return () => { alive = false; };
+  }, [invoiceData]);
+
   // Countdown timer logic
   useEffect(() => {
     if (paymentStatus !== 'pending') return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) {
+        const next = Math.max(0, Math.floor(((invoiceData?.expiresAt || Date.now() + 60 * 60 * 1000) - Date.now()) / 1000));
+        if (next <= 0 || prev <= 1) {
           clearInterval(timer);
           setPaymentStatus('failed');
 
@@ -46,7 +68,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
           }
           return 0;
         }
-        return prev - 1;
+        return next;
       });
     }, 1000);
     return () => clearInterval(timer);
@@ -73,10 +95,30 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
       const saved = localStorage.getItem('goisiin_transactions');
       const list = safeJsonParse(saved, []);
       const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
-      const nextStatus = found?.status || 'pending';
+      const nextStatus = found?.status === 'success' ? 'success' : 'pending';
       setPaymentStatus(nextStatus);
       if (nextStatus === 'success') awardStampForTransaction(found, 'invoice-check');
     }, 2500);
+  };
+
+  const renderBarcode = (value) => {
+    const digits = String(value || '').replace(/\D/g, '').padEnd(16, '0').slice(0, 18);
+    return (
+      <div className="retail-barcode" aria-label={`Barcode ${digits}`}>
+        <div className="retail-barcode__bars">
+          {digits.split('').map((digit, index) => (
+            <span
+              key={`${digit}-${index}`}
+              style={{
+                width: `${Number(digit) % 3 + 2}px`,
+                height: `${64 + (Number(digit) % 4) * 8}px`,
+              }}
+            />
+          ))}
+        </div>
+        <strong>{digits.replace(/(\d{4})(?=\d)/g, '$1 ')}</strong>
+      </div>
+    );
   };
 
   return (
@@ -213,6 +255,32 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
                   <span className="invoice-countdown-label">Selesaikan pembayaran dalam</span>
                   <div className="invoice-countdown-timer">{formatCountdown()}</div>
                   <p className="text-secondary mb-0" style={{ fontSize: '0.8rem' }}>Segera lakukan pembayaran sebelum waktu habis</p>
+                </div>
+              )}
+
+              {paymentStatus === 'pending' && invoiceData.paymentId === 'qris' && (
+                <div className="invoice-payment-box mt-3">
+                  <span className="invoice-label">Scan QRIS</span>
+                  <div className="invoice-qris-frame">
+                    {qrisDataUrl ? (
+                      <img src={qrisDataUrl} alt="QRIS pembayaran Goisiin" />
+                    ) : (
+                      <div className="spinner-border text-success" role="status"></div>
+                    )}
+                  </div>
+                  <p className="text-secondary mb-0" style={{ fontSize: '0.78rem' }}>
+                    QR dibuat otomatis sesuai total bayar invoice ini.
+                  </p>
+                </div>
+              )}
+
+              {paymentStatus === 'pending' && invoiceData.paymentId === 'indomaret' && (
+                <div className="invoice-payment-box mt-3">
+                  <span className="invoice-label">Kode Pembayaran Indomaret</span>
+                  {renderBarcode(invoiceData.retailBarcode)}
+                  <p className="text-secondary mb-0" style={{ fontSize: '0.78rem' }}>
+                    Tunjukkan barcode ini ke kasir dan bayar sesuai total invoice.
+                  </p>
                 </div>
               )}
             </div>

@@ -60,6 +60,7 @@ export default function Footer({ onNavigate }) {
               <div className="gv-footer-payments__grid">
                 {paymentLogoList.map(([name, logoUrl]) => (
                   <div className="gv-payment-badge" key={name}>
+                    <span className="gv-payment-fallback">{name}</span>
                     <img
                       className="gv-payment-logo"
                       src={logoUrl}
@@ -67,7 +68,7 @@ export default function Footer({ onNavigate }) {
                       loading="lazy"
                       onError={(event) => {
                         event.currentTarget.style.display = 'none';
-                        event.currentTarget.closest('.gv-payment-badge')?.setAttribute('aria-label', name);
+                        event.currentTarget.closest('.gv-payment-badge')?.classList.add('gv-payment-badge--fallback');
                       }}
                     />
                   </div>

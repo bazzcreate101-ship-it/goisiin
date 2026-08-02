@@ -329,6 +329,7 @@ function App() {
             products={products}
             onNavigate={handleNavigate}
             user={user}
+            onLoginOpen={() => setIsLoginOpen(true)}
           />
         )}
         {currentView === 'invoice' && (
