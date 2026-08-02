@@ -37,7 +37,7 @@ export default function Footer({ onNavigate }) {
             <a className="contact-a faq-body" href="#/page/privacy">Kebijakan Privasi</a><br />
             <a className="contact-a faq-body" href="#/page/terms">Syarat & Ketentuan</a><br />
             <a className="contact-a faq-body" href="#/page/disclaimer">Disclaimer</a><br />
-            <a className="contact-a faq-body" href="https://wa.me/6285607660007" target="_blank" rel="noreferrer">Pendaftaran Mitra / Reseller</a><br />
+            <a className="contact-a faq-body" href="https://wa.me/6281388427196" target="_blank" rel="noreferrer">Pendaftaran Mitra / Reseller</a><br />
           </div>
 
           <div className="col-md-3 col-6 text-start" style={{ marginTop: '20px' }}>
@@ -51,8 +51,8 @@ export default function Footer({ onNavigate }) {
 
           <div className="col-md-3 col-12 text-start" style={{ marginTop: '20px' }}>
             <h3 className="title-footer2">BUTUH BANTUAN?</h3>
-            <a className="faq-body d-block mb-3" href="https://wa.me/6285607660007" target="_blank" rel="noreferrer">
-              <i className="bi bi-chat-dots-fill me-2 text-success"></i> WhatsApp CS: +62 856-0766-0007
+            <a className="faq-body d-block mb-3" href="https://wa.me/6281388427196" target="_blank" rel="noreferrer">
+              <i className="bi bi-chat-dots-fill me-2 text-success"></i> WhatsApp CS: +62 813-8842-7196
             </a>
             
             <h3 className="title-footer2">PEMBAYARAN</h3>

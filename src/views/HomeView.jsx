@@ -7,6 +7,7 @@ import { STAMP_MIN_TRANSACTION, stampPosterImage } from '../data/stampRewards';
 
 export default function HomeView({ products, onSelectProduct }) {
   const [activeCategory, setActiveCategory] = useState('popular');
+  const [showStampPopup, setShowStampPopup] = useState(true);
 
   const filteredProducts = activeCategory === 'popular'
     ? products.filter(p => p.popular)
@@ -24,21 +25,6 @@ export default function HomeView({ products, onSelectProduct }) {
       <Banner />
 
       <div className="container col-md-8 col-12">
-        <section className="stamp-home-card">
-          <div className="stamp-home-card__copy">
-            <span className="stamp-eyebrow">Promo Stamp Berhadiah</span>
-            <h2>Kumpulkan 6 stamp unik, rebut hadiah utama.</h2>
-            <p>
-              Dapatkan 1 stamp acak setiap transaksi sukses minimal Rp{STAMP_MIN_TRANSACTION.toLocaleString('id-ID')}.
-              Duplicate bisa dikirim atau dibarter dengan user lain.
-            </p>
-            <a href="#/stamp" className="btn btn-success fw-bold">Mulai Kumpulkan Stamp</a>
-          </div>
-          <div className="stamp-home-card__image">
-            <img src={stampPosterImage} alt="Promo Stamp Berhadiah" />
-          </div>
-        </section>
-
         {/* 2. LIST PRODUCT WRAPPER — same structure as original */}
         <div className="list-product">
 
@@ -104,6 +90,21 @@ export default function HomeView({ products, onSelectProduct }) {
           </div>
 
         </div>{/* end .list-product */}
+
+        <section className="stamp-home-card stamp-home-card--below-products">
+          <div className="stamp-home-card__copy">
+            <span className="stamp-eyebrow">Promo Stamp Berhadiah</span>
+            <h2>Kumpulkan 6 stamp unik, rebut hadiah utama.</h2>
+            <p>
+              Dapatkan 1 stamp acak setiap transaksi sukses minimal Rp{STAMP_MIN_TRANSACTION.toLocaleString('id-ID')}.
+              Duplicate bisa dikirim atau dibarter dengan user lain.
+            </p>
+            <a href="#/stamp" className="btn btn-success fw-bold">Mulai Kumpulkan Stamp</a>
+          </div>
+          <div className="stamp-home-card__image">
+            <img src={stampPosterImage} alt="Promo Stamp Berhadiah" />
+          </div>
+        </section>
 
         {/* 3. NEWS SECTION */}
         <div className="news-section mb-4" style={{ background: 'transparent', padding: 0 }}>
@@ -239,6 +240,28 @@ export default function HomeView({ products, onSelectProduct }) {
         </section>
 
       </div>{/* end container col-md-8 */}
+
+      {showStampPopup && (
+        <div className="stamp-popup-backdrop" role="dialog" aria-modal="true" aria-labelledby="stampPopupTitle">
+          <div className="stamp-popup-card">
+            <button className="stamp-popup-close" type="button" aria-label="Tutup promo stamp" onClick={() => setShowStampPopup(false)}>
+              <i className="bi bi-x-lg"></i>
+            </button>
+            <div className="stamp-popup-media">
+              <img src={stampPosterImage} alt="Promo Stamp Berhadiah Goisiin" />
+            </div>
+            <div className="stamp-popup-copy">
+              <span className="stamp-eyebrow">Promo Stamp Berhadiah</span>
+              <h2 id="stampPopupTitle">Kumpulkan 6 stamp unik.</h2>
+              <p>Belanja minimal Rp{STAMP_MIN_TRANSACTION.toLocaleString('id-ID')} untuk dapat 1 stamp acak. Lengkapi semua stamp dan tukarkan hadiah.</p>
+              <div className="stamp-popup-actions">
+                <a href="#/stamp" className="btn btn-success fw-bold" onClick={() => setShowStampPopup(false)}>Lihat Promo</a>
+                <button type="button" className="btn btn-outline-success fw-bold" onClick={() => setShowStampPopup(false)}>Nanti dulu</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 5. MAIN DESCRIPTION / SEO SECTION */}
       <div className="main-description-section">

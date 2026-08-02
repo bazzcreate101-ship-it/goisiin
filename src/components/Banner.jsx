@@ -14,7 +14,7 @@ export default function Banner() {
 
   return (
     <div className="container col-md-8 col-12 my-3">
-      <div className="banner-frame position-relative rounded-md mx-auto overflow-hidden" style={{ height: '320px', aspectRatio: 'auto' }}>
+      <div className="banner-frame position-relative rounded-md mx-auto overflow-hidden">
         {bannerImages.map((imgUrl, index) => (
           <div 
             key={index} 
@@ -31,7 +31,7 @@ export default function Banner() {
               alt={`Banner slide ${index + 1}`}
               decoding="async"
               onError={(event) => { event.currentTarget.src = `/gassets/banner/slide_${index + 1}.png`; }}
-              style={{ objectFit: 'cover' }}
+              style={{ objectFit: 'contain' }}
             />
           </div>
         ))}

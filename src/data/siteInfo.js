@@ -17,6 +17,6 @@ export const promoInfo = [
 ];
 
 export const supportInfo = {
-  whatsapp: '+62 856-0766-0007',
-  whatsappUrl: 'https://wa.me/6285607660007',
+  whatsapp: '+62 813-8842-7196',
+  whatsappUrl: 'https://wa.me/6281388427196',
 };
