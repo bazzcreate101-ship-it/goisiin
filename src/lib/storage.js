@@ -48,15 +48,12 @@ export function normalizeStoredProducts(savedProducts, fallbackProducts) {
 
     const savedProduct = mergedById.get(product.id);
     const savedText = JSON.stringify(savedProduct).toLowerCase();
+    const fallbackDenominationIds = new Set((product.denominations || []).map((denom) => denom.id));
+    const savedHasUnknownDenomination = (savedProduct.denominations || [])
+      .some((denom) => !fallbackDenominationIds.has(denom.id));
     const shouldReplaceStaleAiCatalog = product.id === 'kebutuhan-ai' && (
       savedText.includes('sharing') ||
-      savedText.includes('sementara') ||
-      savedText.includes('kiro') ||
-      savedText.includes('leonardo') ||
-      savedText.includes('kling') ||
-      savedText.includes('perplexity') ||
-      savedText.includes('dola ai') ||
-      savedText.includes('grok super')
+      savedHasUnknownDenomination
     );
 
     if (shouldReplaceStaleAiCatalog) {
