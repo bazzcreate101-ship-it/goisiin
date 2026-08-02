@@ -13,7 +13,7 @@ const cleanInput = (value, type) => {
 };
 
 export default function OrderView({ productId, products, onNavigate, user, onLoginOpen }) {
-  const product = products.find(p => p.id === productId);
+  const product = products.find(p => p.id === productId && p.active !== false);
 
   const [formData, setFormData] = useState({});
   const [selectedDenom, setSelectedDenom] = useState(null);
@@ -59,11 +59,14 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
         newErrors[field.name] = `${field.placeholder} wajib diisi`;
       } else if (field.type === 'number' && !/^\d{3,30}$/.test(value)) {
         newErrors[field.name] = `${field.placeholder} tidak valid`;
+      } else if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        newErrors[field.name] = `${field.placeholder} tidak valid`;
       } else if (field.type === 'select' && field.options && !field.options.includes(value)) {
         newErrors[field.name] = `${field.placeholder} tidak valid`;
       }
     });
     if (!selectedDenom) newErrors.denom = 'Pilih nominal terlebih dahulu';
+    if (selectedDenom && Number(selectedDenom.stock) <= 0) newErrors.denom = 'Stok pilihan ini sedang kosong. Pilih varian lain.';
     if (!selectedPayment) newErrors.payment = 'Pilih metode pembayaran terlebih dahulu';
     return newErrors;
   };
@@ -192,8 +195,9 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
                   />
                   <div>
                     <h2 className="order-product-name">{product.name}</h2>
-                    <span className="badge bg-success text-white">Top Up Instan</span>
+                    <span className="badge bg-success text-white">{product.cardLabel || 'Top Up Instan'}</span>
                     {product.discount && <span className="badge bg-danger ms-1">{product.discount}</span>}
+                    {product.description && <p className="text-secondary mt-2 mb-0" style={{ fontSize: '0.84rem' }}>{product.description}</p>}
                   </div>
                 </div>
               </div>
@@ -257,19 +261,36 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
                 </h5>
                 {errors.denom && <div className="alert alert-danger py-1 px-2 mb-2" style={{ fontSize: '0.83rem' }}>{errors.denom}</div>}
                 <div className="denom-grid">
-                  {product.denominations.map(denom => (
-                    <div
+                  {product.denominations.map(denom => {
+                    const isOutOfStock = Number(denom.stock) <= 0;
+                    return (
+                    <button
                       key={denom.id}
-                      className={`denom-card ${selectedDenom?.id === denom.id ? 'denom-card--active' : ''}`}
-                      onClick={() => setSelectedDenom(denom)}
+                      type="button"
+                      className={`denom-card ${selectedDenom?.id === denom.id ? 'denom-card--active' : ''} ${isOutOfStock ? 'denom-card--disabled' : ''}`}
+                      onClick={() => !isOutOfStock && setSelectedDenom(denom)}
+                      disabled={isOutOfStock}
                     >
+                      {denom.image && (
+                        <img
+                          src={denom.image}
+                          alt={denom.sourceTitle || denom.name}
+                          className="denom-card__image"
+                          loading="lazy"
+                          decoding="async"
+                          onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
                       {denom.originalPrice !== denom.price && (
                         <span className="denom-card__old-price">{formatRupiah(denom.originalPrice)}</span>
                       )}
                       <span className="denom-card__name">{denom.name}</span>
+                      {denom.accessType && <span className="denom-card__meta">{denom.accessType} · {denom.duration || 'Sesuai paket'}</span>}
                       <span className="denom-card__price">{formatRupiah(denom.price)}</span>
-                    </div>
-                  ))}
+                      {Number.isFinite(Number(denom.stock)) && <span className="denom-card__stock">{isOutOfStock ? 'Stok kosong' : `Stok ${denom.stock}`}</span>}
+                      {denom.description && <span className="denom-card__description">{denom.description}</span>}
+                    </button>
+                  );})}
                 </div>
               </div>
 

@@ -25,7 +25,11 @@ const initialCategories = [
   { id: '1', name: 'Top up Game' },
   { id: '2', name: 'Voucher Game' },
   { id: '3', name: 'Hiburan' },
-  { id: '6', name: 'E-Wallet' }
+  { id: '4', name: 'Pulsa & Paket Data' },
+  { id: '6', name: 'E-Wallet' },
+  { id: '7', name: 'Tagihan' },
+  { id: '8', name: 'Gift Card' },
+  { id: '9', name: 'Tools' }
 ];
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
@@ -33,7 +37,7 @@ const cleanAdminText = (value, limit = 160) => String(value ?? '').trim().replac
 
 export default function AdminDashboard({ products, onUpdateProducts, adminUser, onLogout }) {
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'transactions' | 'users' | 'chats'
-  
+
   // Transactions & Users state
   const [adminTransactions, setAdminTransactions] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
@@ -49,6 +53,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     name: '',
     category: '1',
     popular: false,
+    active: true,
     discount: '',
     inputLabel: 'Masukkan Player ID',
     denominations: []
@@ -167,8 +172,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     const sysMsg = {
       id: `sys-${Date.now()}`,
       sender: 'system',
-      text: nextMode 
-        ? `Chat dialihkan sepenuhnya ke Admin ${activeAdmin}. AI Vindy dinonaktifkan.` 
+      text: nextMode
+        ? `Chat dialihkan sepenuhnya ke Admin ${activeAdmin}. AI Vindy dinonaktifkan.`
         : 'Chat dialihkan kembali ke AI Vindy. Admin keluar.',
       timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
     };
@@ -183,6 +188,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       name: cleanAdminText(prod.name, 80),
       category: prod.category,
       popular: prod.popular || false,
+      active: prod.active !== false,
       discount: cleanAdminText(prod.discount || '', 40),
       inputLabel: cleanAdminText(prod.inputLabel || 'Masukkan Player ID', 120),
       denominations: [...prod.denominations]
@@ -196,10 +202,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       name: '',
       category: '1',
       popular: false,
+      active: true,
       discount: '',
       inputLabel: 'Masukkan Player ID',
       denominations: [
-        { id: `d-${Date.now()}-1`, name: '50 Diamonds', originalPrice: 16000, price: 14500, points: 50 }
+        { id: `d-${Date.now()}-1`, name: '50 Diamonds', originalPrice: 16000, price: 14500, points: 50, stock: 10 }
       ]
     });
   };
@@ -211,10 +218,30 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     }
   };
 
+  const handleToggleProductActive = (productId) => {
+    const updated = products.map((product) => (
+      product.id === productId ? { ...product, active: product.active === false } : product
+    ));
+    onUpdateProducts(updated);
+  };
+
   const handleSaveProduct = (e) => {
     e.preventDefault();
     const safeName = cleanAdminText(formData.name, 80);
     if (!safeName) return;
+    const safeDenominations = formData.denominations.map((denom) => ({
+      ...denom,
+      id: cleanAdminText(denom.id || `d-${Date.now()}`, 80),
+      name: cleanAdminText(denom.name, 140),
+      originalPrice: Number(denom.originalPrice || denom.price || 0),
+      price: Number(denom.price || 0),
+      points: Number(denom.points || 0),
+      stock: Number(denom.stock || 0),
+      accessType: cleanAdminText(denom.accessType || '', 40),
+      duration: cleanAdminText(denom.duration || '', 80),
+      warranty: cleanAdminText(denom.warranty || '', 100),
+      description: cleanAdminText(denom.description || '', 220),
+    }));
 
     if (isAddingProduct) {
       const newId = safeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `produk-${Date.now()}`;
@@ -224,12 +251,13 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
         category: formData.category,
         image: productImages['mobile-legend'], // Default fallback icon
         popular: formData.popular,
+        active: formData.active,
         discount: cleanAdminText(formData.discount, 40),
         inputLabel: cleanAdminText(formData.inputLabel, 120),
         inputFields: [
           { name: 'userId', placeholder: 'Masukkan Player ID', type: 'number' }
         ],
-        denominations: formData.denominations
+        denominations: safeDenominations
       };
       onUpdateProducts([...products, newProd]);
       setIsAddingProduct(false);
@@ -241,9 +269,10 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
             name: safeName,
             category: formData.category,
             popular: formData.popular,
+            active: formData.active,
             discount: cleanAdminText(formData.discount, 40),
             inputLabel: cleanAdminText(formData.inputLabel, 120),
-            denominations: formData.denominations
+            denominations: safeDenominations
           };
         }
         return p;
@@ -259,7 +288,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       name: '100 Diamonds',
       originalPrice: 30000,
       price: 28000,
-      points: 100
+      points: 100,
+      stock: 10
     };
     setFormData({
       ...formData,
@@ -339,25 +369,25 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
 
         {/* Tab Buttons */}
         <div className="d-flex gap-2 mb-3 flex-wrap">
-          <button 
+          <button
             className={`btn btn-sm ${activeTab === 'products' ? 'btn-success' : 'btn-outline-success'}`}
             onClick={() => setActiveTab('products')}
           >
             📦 Kelola Produk
           </button>
-          <button 
+          <button
             className={`btn btn-sm ${activeTab === 'transactions' ? 'btn-success' : 'btn-outline-success'}`}
             onClick={() => setActiveTab('transactions')}
           >
             📊 Transaksi Customer
           </button>
-          <button 
+          <button
             className={`btn btn-sm ${activeTab === 'users' ? 'btn-success' : 'btn-outline-success'}`}
             onClick={() => setActiveTab('users')}
           >
             👤 Akun Pengguna
           </button>
-          <button 
+          <button
             className={`btn btn-sm ${activeTab === 'chats' ? 'btn-success' : 'btn-outline-success'} position-relative`}
             onClick={() => setActiveTab('chats')}
           >
@@ -394,6 +424,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                         <th>Produk</th>
                         <th>Kategori</th>
                         <th>Populer</th>
+                        <th>Status</th>
                         <th>Aksi</th>
                       </tr>
                     </thead>
@@ -416,11 +447,24 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                           <td>
                             {initialCategories.find(c => c.id === p.category)?.name || p.category}
                           </td>
-                          <td>{p.popular ? '🟢 Ya' : '⚪ Tidak'}</td>
+                          <td>{p.popular ? 'Ya' : 'Tidak'}</td>
+                          <td>
+                            <span className={`badge ${p.active === false ? 'bg-secondary' : 'bg-success'}`}>
+                              {p.active === false ? 'Nonaktif' : 'Aktif'}
+                            </span>
+                          </td>
                           <td>
                             <div className="d-flex gap-1">
                               <button className="btn btn-outline-success btn-sm p-1 px-2" onClick={() => handleEditProduct(p)} aria-label="Edit">
                                 <i className="bi bi-pencil-fill"></i>
+                              </button>
+                              <button
+                                className="btn btn-outline-warning btn-sm p-1 px-2"
+                                onClick={() => handleToggleProductActive(p.id)}
+                                aria-label={p.active === false ? 'Aktifkan' : 'Nonaktifkan'}
+                                title={p.active === false ? 'Aktifkan produk' : 'Nonaktifkan produk'}
+                              >
+                                <i className={`bi ${p.active === false ? 'bi-eye-fill' : 'bi-eye-slash-fill'}`}></i>
                               </button>
                               <button className="btn btn-outline-danger btn-sm p-1 px-2" onClick={() => handleDeleteProduct(p.id)} aria-label="Hapus">
                                 <i className="bi bi-trash-fill"></i>
@@ -446,8 +490,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                   <form onSubmit={handleSaveProduct}>
                     <div className="mb-3">
                       <label className="form-label text-secondary small">Nama Produk</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         className="form-control order-input"
                         value={formData.name}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -459,7 +503,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     <div className="row g-2 mb-3">
                       <div className="col-md-6 col-12">
                         <label className="form-label text-secondary small">Kategori</label>
-                        <select 
+                        <select
                           className="form-select order-input"
                           value={formData.category}
                           onChange={e => setFormData({ ...formData, category: e.target.value })}
@@ -471,8 +515,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                       </div>
                       <div className="col-md-6 col-12">
                         <label className="form-label text-secondary small">Diskon Promo (Opsional)</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           className="form-control order-input"
                           value={formData.discount}
                           onChange={e => setFormData({ ...formData, discount: e.target.value })}
@@ -482,16 +526,29 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     </div>
 
                     <div className="mb-3">
-                      <div className="form-check form-switch">
-                        <input 
-                          className="form-check-input" 
-                          type="checkbox" 
-                          role="switch" 
-                          id="switchPopular"
-                          checked={formData.popular}
-                          onChange={e => setFormData({ ...formData, popular: e.target.checked })}
-                        />
-                        <label className="form-check-label text-white small" htmlFor="switchPopular">Tampilkan di Produk Populer Beranda</label>
+                      <div className="d-flex flex-column gap-2">
+                        <div className="form-check form-switch">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            role="switch"
+                            id="switchPopular"
+                            checked={formData.popular}
+                            onChange={e => setFormData({ ...formData, popular: e.target.checked })}
+                          />
+                          <label className="form-check-label text-white small" htmlFor="switchPopular">Tampilkan di Produk Populer Beranda</label>
+                        </div>
+                        <div className="form-check form-switch">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            role="switch"
+                            id="switchActive"
+                            checked={formData.active}
+                            onChange={e => setFormData({ ...formData, active: e.target.checked })}
+                          />
+                          <label className="form-check-label text-white small" htmlFor="switchActive">Produk aktif dan bisa dibeli</label>
+                        </div>
                       </div>
                     </div>
 
@@ -506,24 +563,36 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
 
                       <div className="denom-builder-list" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                         {formData.denominations.map((denom) => (
-                          <div key={denom.id} className="d-flex gap-2 align-items-center mb-2 p-2 border border-secondary rounded">
-                            <input 
-                              type="text" 
+                          <div key={denom.id} className="admin-denom-row mb-2 p-2 border border-secondary rounded">
+                            <input
+                              type="text"
                               className="form-control order-input form-control-sm"
-                              style={{ flex: 2 }}
                               value={denom.name}
                               onChange={e => handleUpdateDenom(denom.id, 'name', e.target.value)}
                               placeholder="Nama nominal (misal: 100 Diamonds)"
                               required
                             />
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               className="form-control order-input form-control-sm"
-                              style={{ flex: 1 }}
                               value={denom.price}
                               onChange={e => handleUpdateDenom(denom.id, 'price', parseInt(e.target.value) || 0)}
                               placeholder="Harga"
                               required
+                            />
+                            <input
+                              type="number"
+                              className="form-control order-input form-control-sm"
+                              value={Number.isFinite(Number(denom.stock)) ? denom.stock : ''}
+                              onChange={e => handleUpdateDenom(denom.id, 'stock', parseInt(e.target.value) || 0)}
+                              placeholder="Stok"
+                            />
+                            <input
+                              type="text"
+                              className="form-control order-input form-control-sm"
+                              value={denom.description || ''}
+                              onChange={e => handleUpdateDenom(denom.id, 'description', e.target.value)}
+                              placeholder="Deskripsi nominal"
                             />
                             <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => handleRemoveDenom(denom.id)}>
                               <i className="bi bi-x-lg"></i>
@@ -554,11 +623,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
             <div className="col-md-4 col-12">
               <div className="order-card p-3">
                 <h5 className="text-success fw-bold mb-3">Pengaturan Admin</h5>
-                
+
                 {/* Select Admin Name */}
                 <div className="mb-3">
                   <label className="form-label text-secondary small">Nama Admin Kamu</label>
-                  <select 
+                  <select
                     className="form-select order-input"
                     value={activeAdmin}
                     onChange={e => {
@@ -581,7 +650,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                         {adminMode ? '🔴 Live Admin Mode (AI Off)' : '🟢 AI Vindy Auto (AI On)'}
                       </div>
                     </div>
-                    <button 
+                    <button
                       className={`btn btn-sm ${adminMode ? 'btn-outline-success' : 'btn-success'}`}
                       onClick={handleToggleAdminMode}
                     >
@@ -600,7 +669,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
             <div className="col-md-8 col-12">
               <div className="order-card p-3 d-flex flex-column" style={{ height: '500px' }}>
                 <h5 className="text-success fw-bold mb-3">Obrolan Customer</h5>
-                
+
                 {/* Message Box */}
                 <div className="flex-grow-1 border border-secondary rounded p-3 mb-3" style={{ overflowY: 'auto', background: 'rgba(0,0,0,0.2)' }}>
                   {chatMessages.length === 0 ? (
@@ -623,10 +692,10 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                           <span className="text-secondary mb-1" style={{ fontSize: '0.72rem' }}>
                             {isMe ? `${m.agent || 'Admin'}` : 'User'} ({m.timestamp})
                           </span>
-                          <div 
-                            className={`p-2 rounded`} 
-                            style={{ 
-                              maxWidth: '80%', 
+                          <div
+                            className={`p-2 rounded`}
+                            style={{
+                              maxWidth: '80%',
                               fontSize: '0.85rem',
                               backgroundColor: isMe ? '#6aaa4a' : 'rgba(255,255,255,0.08)',
                               color: '#fff'
@@ -648,8 +717,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
 
                 {/* Input Area */}
                 <form onSubmit={handleAdminSendChat} className="d-flex gap-2">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     className="form-control order-input"
                     value={adminInput}
                     onChange={e => setAdminInput(e.target.value)}
@@ -717,10 +786,10 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                         <td>{t.createdAt}</td>
                         <td>
                           <span className={`badge ${
-                            t.status === 'success' ? 'bg-success' : 
+                            t.status === 'success' ? 'bg-success' :
                             t.status === 'failed' ? 'bg-danger' : 'bg-warning text-dark'
                           }`}>
-                            {t.status === 'success' ? 'Berhasil' : 
+                            {t.status === 'success' ? 'Berhasil' :
                              t.status === 'failed' ? 'Gagal' : 'Menunggu'}
                           </span>
                         </td>
@@ -736,7 +805,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                               <option value="success">Berhasil</option>
                               <option value="failed">Gagal</option>
                             </select>
-                            <button 
+                            <button
                               className="btn btn-outline-danger btn-sm py-0 px-2"
                               style={{ height: '28px' }}
                               onClick={() => handleDeleteTx(t.invoiceId)}
@@ -840,12 +909,12 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     adminUsers.map((u, i) => (
                       <tr key={i}>
                         <td>
-                          <img 
-                            src={u.picture || "https://lh3.googleusercontent.com/a/default-user=s100"} 
-                            alt="Avatar" 
-                            width="32" 
-                            height="32" 
-                            className="rounded-circle" 
+                          <img
+                            src={u.picture || "https://lh3.googleusercontent.com/a/default-user=s100"}
+                            alt="Avatar"
+                            width="32"
+                            height="32"
+                            className="rounded-circle"
                             onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
                           />
                         </td>

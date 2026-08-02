@@ -9,9 +9,10 @@ export default function HomeView({ products, onSelectProduct, onNavigate }) {
   const [activeCategory, setActiveCategory] = useState('popular');
   const [showStampPopup, setShowStampPopup] = useState(true);
 
+  const visibleProducts = products.filter((product) => product.active !== false);
   const filteredProducts = activeCategory === 'popular'
-    ? products.filter(p => p.popular)
-    : products.filter(p => p.category === activeCategory);
+    ? visibleProducts.filter(p => p.popular)
+    : visibleProducts.filter(p => p.category === activeCategory);
 
   const handleProductClick = (prodId, e) => {
     e.preventDefault();
@@ -77,7 +78,7 @@ export default function HomeView({ products, onSelectProduct, onNavigate }) {
                         </div>
                         <div className="custom-card-body">
                           {prod.name}<br />
-                          <p style={{ fontSize: '0.75rem' }}>Top up Game</p>
+                          <p style={{ fontSize: '0.75rem' }}>{prod.cardLabel || 'Top up Game'}</p>
                         </div>
                         {prod.discount && (
                           <>

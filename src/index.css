@@ -2132,9 +2132,12 @@ footer a:hover {
   flex-direction: column;
   gap: 4px;
   position: relative;
+  text-align: left;
+  width: 100%;
+  color: inherit;
 }
 
-.denom-card:hover {
+.denom-card:hover:not(.denom-card--disabled) {
   border-color: var(--first-color);
   background: rgba(106, 170, 74, 0.06);
 }
@@ -2151,6 +2154,17 @@ footer a:hover {
   text-decoration: line-through;
 }
 
+.denom-card__image {
+  width: 100%;
+  height: 82px;
+  object-fit: contain;
+  object-position: center;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 3px;
+}
+
 .denom-card__name {
   font-size: 0.82rem;
   font-weight: 600;
@@ -2162,6 +2176,49 @@ footer a:hover {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--first-color);
+}
+
+.denom-card__meta,
+.denom-card__stock,
+.denom-card__description {
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.denom-card__meta {
+  color: #cbd5e1;
+}
+
+.denom-card__stock {
+  color: #facc15;
+  font-weight: 700;
+}
+
+.denom-card__description {
+  color: #9ca3af;
+}
+
+.denom-card--disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: grayscale(0.45);
+}
+
+.denom-card--disabled .denom-card__price {
+  color: #9ca3af;
+}
+
+.admin-denom-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 2fr) minmax(96px, 0.8fr) minmax(80px, 0.6fr) minmax(180px, 2fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 767.98px) {
+  .admin-denom-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Payment tabs */

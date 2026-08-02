@@ -86,14 +86,27 @@ export default function ChatWidget({ products, user, transactions }) {
 
     return ({
     user: user ? { name: user.name, email: user.email } : null,
-    products: products.map((product) => ({
+    products: products.filter((product) => product.active !== false).map((product) => ({
       id: product.id,
       name: product.name,
       category: product.category,
+      cardLabel: product.cardLabel,
+      description: product.description,
       popular: product.popular,
       discount: product.discount,
       inputLabel: product.inputLabel,
-      denominations: product.denominations,
+      denominations: product.denominations?.map((denom) => ({
+        id: denom.id,
+        name: denom.name,
+        price: denom.price,
+        originalPrice: denom.originalPrice,
+        points: denom.points,
+        stock: denom.stock,
+        accessType: denom.accessType,
+        duration: denom.duration,
+        warranty: denom.warranty,
+        description: denom.description,
+      })),
     })),
     paymentChannels: paymentChannels.map((channel) => ({
       id: channel.id,

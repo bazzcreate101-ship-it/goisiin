@@ -1,4 +1,5 @@
 import { productImages, paymentImages } from '../assets/images';
+import { aiDenominations } from './aiDenominations';
 
 export const categories = [
   { id: 'popular', name: 'Populer' },
@@ -8,7 +9,8 @@ export const categories = [
   { id: '4', name: 'Pulsa & Paket Data' },
   { id: '6', name: 'E-Wallet' },
   { id: '7', name: 'Tagihan' },
-  { id: '8', name: 'Gift Card' }
+  { id: '8', name: 'Gift Card' },
+  { id: '9', name: 'Tools' }
 ];
 
 export const products = [
@@ -258,6 +260,23 @@ export const products = [
       { id: 'nf-1m-1u', name: 'Premium 1 Bulan (1 User Sharing)', originalPrice: 35000, price: 31000, points: 25 },
       { id: 'nf-1m-5u', name: 'Premium 1 Bulan (Private Account)', originalPrice: 150000, price: 139000, points: 150 }
     ]
+  },
+  {
+    id: 'kebutuhan-ai',
+    name: 'Kebutuhan AI',
+    category: '9',
+    image: '/gassets/ai/ai-claude-pro.webp',
+    popular: true,
+    active: true,
+    discount: 'TOOLS AI',
+    cardLabel: 'Akun AI',
+    description: 'Katalog akun AI premium seperti ChatGPT, Claude, Gemini, Grok, Perplexity, Kiro, Leonardo, Kling, dan Dola AI. Pilihan Private tersedia sesuai stok, sedangkan Sharing disiapkan dengan stok 0 sementara.',
+    inputLabel: 'Masukkan WhatsApp aktif dan email penerima untuk pengiriman akun AI',
+    inputFields: [
+      { name: 'whatsapp', placeholder: 'Nomor WhatsApp aktif', type: 'number' },
+      { name: 'email', placeholder: 'Email penerima / Gmail aktif', type: 'email' }
+    ],
+    denominations: aiDenominations
   },
   {
     id: 'spotify-premium',

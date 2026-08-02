@@ -29,5 +29,22 @@ export function findTransactionByInvoiceId(invoiceId) {
 
 export function normalizeStoredProducts(savedProducts, fallbackProducts) {
   const parsed = safeJsonParse(savedProducts, null);
-  return Array.isArray(parsed) ? parsed : fallbackProducts;
+  const normalize = (product) => ({
+    active: true,
+    ...product,
+    denominations: Array.isArray(product?.denominations) ? product.denominations : [],
+  });
+
+  if (!Array.isArray(parsed)) {
+    return fallbackProducts.map(normalize);
+  }
+
+  const mergedById = new Map(parsed.map((product) => [product.id, normalize(product)]));
+  fallbackProducts.forEach((product) => {
+    if (!mergedById.has(product.id)) {
+      mergedById.set(product.id, normalize(product));
+    }
+  });
+
+  return Array.from(mergedById.values());
 }

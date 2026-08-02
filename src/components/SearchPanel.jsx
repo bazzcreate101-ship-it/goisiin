@@ -7,6 +7,7 @@ export default function SearchPanel({ isOpen, products, onClose, onSelectProduct
   useEffect(() => {
     if (query.trim().length >= 3) {
       const filtered = products.filter(p =>
+        p.active !== false &&
         p.name.toLowerCase().includes(query.toLowerCase())
       );
       setResults(filtered);
@@ -86,7 +87,7 @@ export default function SearchPanel({ isOpen, products, onClose, onSelectProduct
                         />
                         <div className="flex-grow-1">
                           <div className="fw-semibold text-white">{prod.name}</div>
-                          <div className="small text-secondary" style={{ opacity: 0.85 }}>Mulai top up instan murah</div>
+                          <div className="small text-secondary" style={{ opacity: 0.85 }}>{prod.cardLabel || 'Mulai top up instan murah'}</div>
                         </div>
                         {prod.discount && <span className="badge rounded-pill ms-2 search-badge">{prod.discount}</span>}
                       </a>

@@ -24,6 +24,8 @@ function compactProducts(products) {
     id: cleanText(product.id, 80),
     name: cleanText(product.name, 100),
     category: cleanText(product.categoryName || product.category, 80),
+    cardLabel: cleanText(product.cardLabel, 80),
+    description: cleanText(product.description, 220),
     popular: Boolean(product.popular),
     discount: cleanText(product.discount, 80),
     inputLabel: cleanText(product.inputLabel, 160),
@@ -33,6 +35,11 @@ function compactProducts(products) {
       price: Number(denom.price || 0),
       originalPrice: Number(denom.originalPrice || denom.price || 0),
       points: Number(denom.points || 0),
+      stock: Number(denom.stock || 0),
+      accessType: cleanText(denom.accessType, 60),
+      duration: cleanText(denom.duration, 80),
+      warranty: cleanText(denom.warranty, 120),
+      description: cleanText(denom.description, 220),
     })),
   }));
 }
@@ -64,7 +71,9 @@ function looksLikeGoisiinTopic(message, productNames) {
     'ovo', 'shopeepay', 'linkaja', 'bank', 'virtual account', 'admin',
     'cs', 'bantuan', 'refund', 'promo', 'diskon', 'harga', 'produk',
     'login', 'akun', 'riwayat', 'halo', 'hai', 'kak', 'saldo', 'dompet',
-    'withdraw', 'tarik saldo', 'top up saldo', 'wallet',
+    'withdraw', 'tarik saldo', 'top up saldo', 'wallet', 'tools',
+    'ai', 'chatgpt', 'claude', 'gemini', 'grok', 'perplexity', 'kiro',
+    'leonardo', 'kling', 'dola',
   ];
   return keywords.some((keyword) => text.includes(keyword)) ||
     productNames.some((name) => name && text.includes(name.toLowerCase()));
