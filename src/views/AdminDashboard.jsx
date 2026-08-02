@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { productImages } from '../assets/images';
-import { safeJsonParse } from '../lib/storage';
+import { readStorageList, safeJsonParse, writeStorageList } from '../lib/storage';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -10,6 +10,7 @@ const initialCategories = [
 ];
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+const cleanAdminText = (value, limit = 160) => String(value ?? '').trim().replace(/[<>`{}]/g, '').slice(0, limit);
 
 export default function AdminDashboard({ products, onUpdateProducts, adminUser, onLogout }) {
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'transactions' | 'users' | 'chats'
@@ -40,10 +41,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   // Load transactions and users from localStorage
   useEffect(() => {
     const loadData = () => {
-      const savedTx = localStorage.getItem('goisiin_transactions');
-      const savedUsers = localStorage.getItem('goisiin_users');
-      if (savedTx) setAdminTransactions(safeJsonParse(savedTx, []));
-      if (savedUsers) setAdminUsers(safeJsonParse(savedUsers, []));
+      setAdminTransactions(readStorageList('goisiin_transactions'));
+      setAdminUsers(readStorageList('goisiin_users'));
     };
     loadData();
     const timer = setInterval(loadData, 3000);
@@ -58,14 +57,14 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       return t;
     });
     setAdminTransactions(updated);
-    localStorage.setItem('goisiin_transactions', JSON.stringify(updated));
+    writeStorageList('goisiin_transactions', updated);
   };
 
   const handleDeleteTx = (invoiceId) => {
     if (window.confirm(`Kakak yakin ingin menghapus invoice #${invoiceId}?`)) {
       const updated = adminTransactions.filter(t => t.invoiceId !== invoiceId);
       setAdminTransactions(updated);
-      localStorage.setItem('goisiin_transactions', JSON.stringify(updated));
+      writeStorageList('goisiin_transactions', updated);
     }
   };
 
@@ -76,7 +75,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       const savedAdminMode = localStorage.getItem('goisiin_chat_admin_mode');
       const savedActiveAdmin = localStorage.getItem('goisiin_chat_active_admin');
 
-      if (savedMsgs) setChatMessages(safeJsonParse(savedMsgs, []));
+      if (savedMsgs) setChatMessages(readStorageList('goisiin_chat_messages'));
       if (savedAdminMode) setAdminMode(Boolean(safeJsonParse(savedAdminMode, false)));
       if (savedActiveAdmin) setActiveAdmin(savedActiveAdmin);
     };
@@ -88,9 +87,10 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   }, []);
 
   const handleSaveChats = (msgs, mode = adminMode, adminName = activeAdmin) => {
-    setChatMessages(msgs);
+    const safeMessages = Array.isArray(msgs) ? msgs.slice(-300) : [];
+    setChatMessages(safeMessages);
     setAdminMode(mode);
-    localStorage.setItem('goisiin_chat_messages', JSON.stringify(msgs));
+    writeStorageList('goisiin_chat_messages', safeMessages);
     localStorage.setItem('goisiin_chat_admin_mode', JSON.stringify(mode));
     localStorage.setItem('goisiin_chat_active_admin', adminName);
     // Sync storage event
@@ -102,7 +102,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     if (!adminInput.trim()) return;
 
     setAdminTyping(true);
-    const textToSend = adminInput;
+    const textToSend = cleanAdminText(adminInput, 500);
+    if (!textToSend) return;
     setAdminInput('');
 
     // Simulate typing delay (1.5s to 3s)
@@ -140,11 +141,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     setEditingProduct(prod);
     setIsAddingProduct(false);
     setFormData({
-      name: prod.name,
+      name: cleanAdminText(prod.name, 80),
       category: prod.category,
       popular: prod.popular || false,
-      discount: prod.discount || '',
-      inputLabel: prod.inputLabel || 'Masukkan Player ID',
+      discount: cleanAdminText(prod.discount || '', 40),
+      inputLabel: cleanAdminText(prod.inputLabel || 'Masukkan Player ID', 120),
       denominations: [...prod.denominations]
     });
   };
@@ -173,18 +174,19 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
 
   const handleSaveProduct = (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    const safeName = cleanAdminText(formData.name, 80);
+    if (!safeName) return;
 
     if (isAddingProduct) {
-      const newId = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const newId = safeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `produk-${Date.now()}`;
       const newProd = {
         id: newId,
-        name: formData.name,
+        name: safeName,
         category: formData.category,
         image: productImages['mobile-legend'], // Default fallback icon
         popular: formData.popular,
-        discount: formData.discount,
-        inputLabel: formData.inputLabel,
+        discount: cleanAdminText(formData.discount, 40),
+        inputLabel: cleanAdminText(formData.inputLabel, 120),
         inputFields: [
           { name: 'userId', placeholder: 'Masukkan Player ID', type: 'number' }
         ],
@@ -197,11 +199,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
         if (p.id === editingProduct.id) {
           return {
             ...p,
-            name: formData.name,
+            name: safeName,
             category: formData.category,
             popular: formData.popular,
-            discount: formData.discount,
-            inputLabel: formData.inputLabel,
+            discount: cleanAdminText(formData.discount, 40),
+            inputLabel: cleanAdminText(formData.inputLabel, 120),
             denominations: formData.denominations
           };
         }
@@ -325,7 +327,14 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                         <tr key={p.id}>
                           <td>
                             <div className="d-flex align-items-center gap-2">
-                              <img src={p.image} alt={p.name} width="32" height="32" className="rounded" />
+                              <img
+                                src={p.image}
+                                alt={p.name}
+                                width="32"
+                                height="32"
+                                className="rounded"
+                                onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
+                              />
                               <span>{p.name}</span>
                             </div>
                           </td>
@@ -610,7 +619,14 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                         <td>{t.userEmail || <span className="text-secondary">Guest (No Login)</span>}</td>
                         <td>
                           <div className="d-flex align-items-center gap-2">
-                            <img src={t.productImage} alt={t.productName} width="24" height="24" className="rounded" />
+                            <img
+                              src={t.productImage}
+                              alt={t.productName}
+                              width="24"
+                              height="24"
+                              className="rounded"
+                              onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
+                            />
                             <div>
                               <strong>{t.productName}</strong>
                               <div className="text-secondary" style={{ fontSize: '0.75rem' }}>{t.denomination}</div>
@@ -692,6 +708,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                             width="32" 
                             height="32" 
                             className="rounded-circle" 
+                            onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
                           />
                         </td>
                         <td className="fw-semibold text-white">{u.name}</td>

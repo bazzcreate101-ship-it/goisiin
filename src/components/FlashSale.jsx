@@ -115,7 +115,7 @@ export default function FlashSale({ onSelectProduct }) {
           <div className="flash-sale-track">
             {marqueeItems.map((item, idx) => (
               <a 
-                href={`#/order/game/${item.productId}`} 
+                href={`#/order/${item.productId}`} 
                 className="flash-sale-card" 
                 key={idx} 
                 onClick={(e) => handleCardClick(item.productId, e)}
@@ -123,7 +123,12 @@ export default function FlashSale({ onSelectProduct }) {
               >
                 <span className="flash-sale-card__glow"></span>
                 <div className="flash-sale-card__thumb">
-                  <img src={item.image} alt={item.name} loading="lazy" />
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    loading="lazy"
+                    onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
+                  />
                   <span className="flash-sale-card__tag">{item.price}</span>
                 </div>
                 <div className="flash-sale-card__body">

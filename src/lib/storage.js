@@ -7,11 +7,12 @@ export function safeJsonParse(value, fallback) {
 }
 
 export function readStorageList(key) {
-  return safeJsonParse(localStorage.getItem(key), []);
+  const parsed = safeJsonParse(localStorage.getItem(key), []);
+  return Array.isArray(parsed) ? parsed.slice(0, 500) : [];
 }
 
 export function writeStorageList(key, value) {
-  localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : []));
+  localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value.slice(0, 500) : []));
 }
 
 export function readUserTransactions(user) {

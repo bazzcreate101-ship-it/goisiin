@@ -40,10 +40,10 @@ import rfImg from './product/rf-return.webp';
 import netflixImg from './product/netflix.webp';
 
 // --- BANNER IMAGES ---
-import banner1 from './banner/slide_1.png';
-import banner2 from './banner/slide_2.png';
-import banner3 from './banner/slide_3.png';
-import banner4 from './banner/slide_4.png';
+import banner1 from './banner/slide_1.webp';
+import banner2 from './banner/slide_2.webp';
+import banner3 from './banner/slide_3.webp';
+import banner4 from './banner/slide_4.webp';
 
 // --- ICON IMAGES ---
 import iconArticle from './icon/article-svgrepo-com.svg';

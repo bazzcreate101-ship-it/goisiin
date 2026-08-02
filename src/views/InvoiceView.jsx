@@ -142,7 +142,11 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
                   <div className="invoice-date text-secondary">{invoiceData.createdAt}</div>
                 </div>
                 <div className="invoice-header-logo">
-                  <img src={invoiceData.productImage} alt={invoiceData.productName} />
+                  <img
+                    src={invoiceData.productImage}
+                    alt={invoiceData.productName}
+                    onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
+                  />
                 </div>
               </div>
 
@@ -190,7 +194,12 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
               <div className="invoice-payment-method">
                 <span className="invoice-label">Metode Pembayaran</span>
                 <div className="d-flex align-items-center gap-2 mt-2">
-                  <img src={invoiceData.paymentImage} alt={invoiceData.paymentMethod} style={{ height: '28px', objectFit: 'contain' }} />
+                  <img
+                    src={invoiceData.paymentImage}
+                    alt={invoiceData.paymentMethod}
+                    style={{ height: '28px', objectFit: 'contain' }}
+                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                  />
                   <span className="text-white fw-semibold">{invoiceData.paymentMethod}</span>
                 </div>
               </div>

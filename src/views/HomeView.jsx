@@ -50,7 +50,7 @@ export default function HomeView({ products, onSelectProduct }) {
                 {filteredProducts.map(prod => (
                   <div key={prod.id} className="col-6 col-lg-3 mb-3 p-1" style={{ minHeight: '80px' }}>
                     <a
-                      href={`#/order/game/${prod.id}`}
+                      href={`#/order/${prod.id}`}
                       onClick={(e) => handleProductClick(prod.id, e)}
                       style={{ textDecoration: 'none' }}
                     >
@@ -65,6 +65,7 @@ export default function HomeView({ products, onSelectProduct }) {
                             className="custom-card-icon"
                             loading="lazy"
                             decoding="async"
+                            onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
                           />
                         </div>
                         <div className="custom-card-body">
@@ -97,14 +98,14 @@ export default function HomeView({ products, onSelectProduct }) {
               <h3>Update terbaru dari Goisiin</h3>
               <p className="news-section-subtitle">Dapatkan tips, promo, dan highlight komunitas setiap minggunya.</p>
             </div>
-            <a href="https://garudavoucher.id/blog/" target="_blank" rel="noopener noreferrer" className="news-section-link">
+            <a href="#/blog" className="news-section-link">
               Lihat semua <span aria-hidden="true">&rarr;</span>
             </a>
           </div>
           <div className="news-card-track">
-            <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
+            <a href="#/blog" className="news-card">
               <div className="news-card-thumb">
-                <img src={bannerImages[0]} alt="News 1" />
+                <img src={bannerImages[0]} alt="News 1" onError={(event) => { event.currentTarget.src = '/gassets/banner/slide_1.png'; }} />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Promo Diamond Mobile Legends Merdeka 2026</h4>
@@ -112,9 +113,9 @@ export default function HomeView({ products, onSelectProduct }) {
                 <span className="news-card-cta">Baca selengkapnya &rarr;</span>
               </div>
             </a>
-            <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
+            <a href="#/blog" className="news-card">
               <div className="news-card-thumb">
-                <img src={bannerImages[1]} alt="News 2" />
+                <img src={bannerImages[1]} alt="News 2" onError={(event) => { event.currentTarget.src = '/gassets/banner/slide_2.png'; }} />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Event Top Up Free Fire x Spider-Man</h4>
@@ -122,9 +123,9 @@ export default function HomeView({ products, onSelectProduct }) {
                 <span className="news-card-cta">Baca selengkapnya &rarr;</span>
               </div>
             </a>
-            <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
+            <a href="#/blog" className="news-card">
               <div className="news-card-thumb">
-                <img src={bannerImages[2]} alt="News 3" />
+                <img src={bannerImages[2]} alt="News 3" onError={(event) => { event.currentTarget.src = '/gassets/banner/slide_3.png'; }} />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Tips Aman Top Up Akun Game Online</h4>

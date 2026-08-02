@@ -126,9 +126,9 @@ export default function LoginModal({ isOpen, onClose }) {
 
               <p className="auth-modal__terms">
                 Dengan masuk ke Goisiin, kamu menyetujui{' '}
-                <a href="https://garudavoucher.id/page/terms" target="_blank" rel="noopener noreferrer">Syarat dan Ketentuan</a>{' '}
+                <a href="#/page/terms">Syarat dan Ketentuan</a>{' '}
                 serta{' '}
-                <a href="https://garudavoucher.id/page/privacy" target="_blank" rel="noopener noreferrer">Kebijakan Privasi</a>.
+                <a href="#/page/privacy">Kebijakan Privasi</a>.
               </p>
             </section>
           </div>

@@ -71,11 +71,19 @@ export default function SearchPanel({ isOpen, products, onClose, onSelectProduct
                   {results.map(prod => (
                     <li key={prod.id} className="search-item">
                       <a
-                        href={`#/order/game/${prod.id}`}
+                        href={`#/order/${prod.id}`}
                         onClick={(e) => { e.preventDefault(); handleResultClick(prod.id); }}
                         className="d-flex align-items-center"
                       >
-                        <img src={prod.image} className="me-2 p-1" width="50" height="50" loading="lazy" alt={prod.name} />
+                        <img
+                          src={prod.image}
+                          className="me-2 p-1"
+                          width="50"
+                          height="50"
+                          loading="lazy"
+                          alt={prod.name}
+                          onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
+                        />
                         <div className="flex-grow-1">
                           <div className="fw-semibold text-white">{prod.name}</div>
                           <div className="small text-secondary" style={{ opacity: 0.85 }}>Mulai top up instan murah</div>

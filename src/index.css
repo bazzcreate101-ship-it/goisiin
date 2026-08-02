@@ -59,7 +59,8 @@ body {
 }
 
 .navbar-brand .img-logo {
-  height: clamp(24px, 3.4vw, 34px);
+  height: clamp(42px, 6vw, 64px);
+  max-width: min(210px, 44vw);
   object-fit: contain;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18));
 }

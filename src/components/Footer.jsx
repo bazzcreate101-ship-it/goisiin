@@ -1,6 +1,22 @@
 import React from 'react';
-import { paymentLogoList } from '../assets/images';
 
+const paymentLogoList = [
+  ['QRIS', '/gassets/payment/qris.svg'],
+  ['DANA', '/gassets/payment/dana.svg'],
+  ['GoPay', '/gassets/payment/gopay.svg'],
+  ['OVO', '/gassets/payment/ovo.svg'],
+  ['ShopeePay', '/gassets/payment/shopeepay.svg'],
+  ['LinkAja', '/gassets/payment/linkaja.svg'],
+  ['BCA', '/gassets/payment/bca.svg'],
+  ['BRI', '/gassets/payment/bri.svg'],
+  ['Mandiri', '/gassets/payment/mandiri.svg'],
+  ['BNI', '/gassets/payment/bni.svg'],
+  ['BSI', '/gassets/payment/bsi.svg'],
+  ['CIMB', '/gassets/payment/cimb.svg'],
+  ['PermataBank', '/gassets/payment/permatabank.svg'],
+  ['Alfamart', '/gassets/payment/alfamart.svg'],
+  ['Indomaret', '/gassets/payment/indomaret.svg'],
+];
 
 
 export default function Footer({ onNavigate }) {
@@ -18,9 +34,9 @@ export default function Footer({ onNavigate }) {
           
           <div className="col-md-3 col-6 text-start" style={{ marginTop: '20px' }}>
             <h3 className="title-footer2">PETA SITUS</h3>
-            <a className="contact-a faq-body" href="https://garudavoucher.id/page/privacy" target="_blank" rel="noreferrer">Kebijakan Privasi</a><br />
-            <a className="contact-a faq-body" href="https://garudavoucher.id/page/terms" target="_blank" rel="noreferrer">Syarat & Ketentuan</a><br />
-            <a className="contact-a faq-body" href="https://garudavoucher.id/page/disclaimer" target="_blank" rel="noreferrer">Disclaimer</a><br />
+            <a className="contact-a faq-body" href="#/page/privacy">Kebijakan Privasi</a><br />
+            <a className="contact-a faq-body" href="#/page/terms">Syarat & Ketentuan</a><br />
+            <a className="contact-a faq-body" href="#/page/disclaimer">Disclaimer</a><br />
             <a className="contact-a faq-body" href="https://wa.me/6285607660007" target="_blank" rel="noreferrer">Pendaftaran Mitra / Reseller</a><br />
           </div>
 
@@ -42,9 +58,18 @@ export default function Footer({ onNavigate }) {
             <h3 className="title-footer2">PEMBAYARAN</h3>
             <div className="gv-footer-payments">
               <div className="gv-footer-payments__grid">
-                {paymentLogoList.map((logoUrl, i) => (
-                  <div className="gv-payment-badge" key={i}>
-                    <img className="gv-payment-logo" src={logoUrl} alt="Payment Logo" />
+                {paymentLogoList.map(([name, logoUrl]) => (
+                  <div className="gv-payment-badge" key={name}>
+                    <img
+                      className="gv-payment-logo"
+                      src={logoUrl}
+                      alt={name}
+                      loading="lazy"
+                      onError={(event) => {
+                        event.currentTarget.style.display = 'none';
+                        event.currentTarget.closest('.gv-payment-badge')?.setAttribute('aria-label', name);
+                      }}
+                    />
                   </div>
                 ))}
               </div>

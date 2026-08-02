@@ -73,7 +73,14 @@ export default function TransactionsView({ user, onNavigate }) {
                       <td className="fw-semibold text-white">#{tx.invoiceId}</td>
                       <td>
                         <div className="d-flex align-items-center gap-2">
-                          <img src={tx.productImage} alt={tx.productName} width="28" height="28" className="rounded" />
+                          <img
+                            src={tx.productImage}
+                            alt={tx.productName}
+                            width="28"
+                            height="28"
+                            className="rounded"
+                            onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
+                          />
                           <div>
                             <div className="fw-bold">{tx.productName}</div>
                             <div className="text-secondary" style={{ fontSize: '0.75rem' }}>{tx.denomination}</div>

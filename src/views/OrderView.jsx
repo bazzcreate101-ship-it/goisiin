@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { paymentChannels } from '../data/products';
-import { safeJsonParse } from '../lib/storage';
+import { readStorageList, writeStorageList } from '../lib/storage';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+const cleanInput = (value, type) => {
+  const trimmed = String(value ?? '').trim().slice(0, 80);
+  if (type === 'number') return trimmed.replace(/[^\d]/g, '').slice(0, 30);
+  return trimmed.replace(/[<>`{}]/g, '');
+};
 
 export default function OrderView({ productId, products, onNavigate, user }) {
   const product = products.find(p => p.id === productId);
@@ -29,10 +34,12 @@ export default function OrderView({ productId, products, onNavigate, user }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const field = product.inputFields.find(item => item.name === name);
+    const safeValue = cleanInput(value, field?.type);
+    setFormData(prev => ({ ...prev, [name]: safeValue }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
     // Simulate nick preview
-    if (name === 'userId' && value.length >= 5) {
+    if (name === 'userId' && safeValue.length >= 5) {
       setNickPreview('GamePlayer' + Math.floor(Math.random() * 9999));
     } else {
       setNickPreview('');
@@ -42,8 +49,13 @@ export default function OrderView({ productId, products, onNavigate, user }) {
   const validate = () => {
     const newErrors = {};
     product.inputFields.forEach(field => {
-      if (!formData[field.name] || String(formData[field.name]).trim() === '') {
+      const value = cleanInput(formData[field.name], field.type);
+      if (!value) {
         newErrors[field.name] = `${field.placeholder} wajib diisi`;
+      } else if (field.type === 'number' && !/^\d{3,30}$/.test(value)) {
+        newErrors[field.name] = `${field.placeholder} tidak valid`;
+      } else if (field.type === 'select' && field.options && !field.options.includes(value)) {
+        newErrors[field.name] = `${field.placeholder} tidak valid`;
       }
     });
     if (!selectedDenom) newErrors.denom = 'Pilih nominal terlebih dahulu';
@@ -65,6 +77,7 @@ export default function OrderView({ productId, products, onNavigate, user }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -79,7 +92,7 @@ export default function OrderView({ productId, products, onNavigate, user }) {
         productName: product.name,
         productImage: product.image,
         denomination: selectedDenom.name,
-        userId: Object.values(formData).join(' / '),
+        userId: product.inputFields.map(field => cleanInput(formData[field.name], field.type)).join(' / '),
         nick: nickPreview || 'User',
         paymentMethod: selectedPayment.name,
         paymentImage: selectedPayment.image,
@@ -92,10 +105,9 @@ export default function OrderView({ productId, products, onNavigate, user }) {
       };
 
       // Simpan transaksi ke localStorage
-      const saved = localStorage.getItem('goisiin_transactions');
-      const list = safeJsonParse(saved, []);
+      const list = readStorageList('goisiin_transactions');
       list.unshift(invoiceData);
-      localStorage.setItem('goisiin_transactions', JSON.stringify(list));
+      writeStorageList('goisiin_transactions', list);
 
       setIsSubmitting(false);
       onNavigate('invoice', invoiceData);
@@ -124,7 +136,12 @@ export default function OrderView({ productId, products, onNavigate, user }) {
               {/* Product header */}
               <div className="order-card mb-3">
                 <div className="d-flex align-items-center gap-3">
-                  <img src={product.image} alt={product.name} className="order-product-img" />
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="order-product-img"
+                    onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
+                  />
                   <div>
                     <h2 className="order-product-name">{product.name}</h2>
                     <span className="badge bg-success text-white">Top Up Instan</span>
@@ -158,7 +175,10 @@ export default function OrderView({ productId, products, onNavigate, user }) {
                       ) : (
                         <input
                           className={`form-control order-input ${errors[field.name] ? 'is-invalid' : ''}`}
-                          type={field.type || 'text'}
+                          type={field.type === 'number' ? 'text' : field.type || 'text'}
+                          inputMode={field.type === 'number' ? 'numeric' : undefined}
+                          pattern={field.type === 'number' ? '[0-9]*' : undefined}
+                          maxLength={field.type === 'number' ? 30 : 80}
                           name={field.name}
                           placeholder={field.placeholder}
                           value={formData[field.name] || ''}
@@ -235,7 +255,12 @@ export default function OrderView({ productId, products, onNavigate, user }) {
                       className={`payment-option ${selectedPayment?.id === ch.id ? 'payment-option--active' : ''}`}
                       onClick={() => setSelectedPayment(ch)}
                     >
-                      <img src={ch.image} alt={ch.name} className="payment-option__logo" />
+                      <img
+                        src={ch.image}
+                        alt={ch.name}
+                        className="payment-option__logo"
+                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                      />
                       <span className="payment-option__name">{ch.name}</span>
                       {(ch.feeFlat > 0 || ch.feePercent > 0) && (
                         <span className="payment-option__fee">

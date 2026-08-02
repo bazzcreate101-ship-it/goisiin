@@ -30,6 +30,7 @@ export default function Banner() {
               className="banner-slide-image w-100 h-100"
               alt={`Banner slide ${index + 1}`}
               decoding="async"
+              onError={(event) => { event.currentTarget.src = `/gassets/banner/slide_${index + 1}.png`; }}
               style={{ objectFit: 'cover' }}
             />
           </div>

@@ -9,6 +9,7 @@ import InvoiceView from './views/InvoiceView';
 import TransactionsView from './views/TransactionsView';
 import AdminLogin from './views/AdminLogin';
 import AdminDashboard from './views/AdminDashboard';
+import PageView from './views/PageView';
 import ChatWidget from './components/ChatWidget';
 import { products as initialProducts } from './data/products';
 import { supabase } from './lib/supabaseClient';
@@ -29,6 +30,9 @@ const parseRoute = () => {
   if (isAdminUrl()) return { view: 'admin' };
 
   const hash = window.location.hash || '';
+  if (hash.startsWith('#/order/game/')) {
+    return { view: 'order', productId: decodeURIComponent(hash.replace('#/order/game/', '')) };
+  }
   if (hash.startsWith('#/order/')) {
     return { view: 'order', productId: decodeURIComponent(hash.replace('#/order/', '')) };
   }
@@ -38,6 +42,14 @@ const parseRoute = () => {
   if (hash === '#/transactions') {
     return { view: 'transactions' };
   }
+  if (hash === '#/blog') {
+    return { view: 'page', page: 'blog' };
+  }
+  if (hash.startsWith('#/page/')) {
+    const page = decodeURIComponent(hash.replace('#/page/', ''));
+    const allowedPages = ['privacy', 'terms', 'disclaimer'];
+    return { view: 'page', page: allowedPages.includes(page) ? page : 'privacy' };
+  }
   return { view: 'home' };
 };
 
@@ -45,6 +57,7 @@ function App() {
   const [initialRoute] = useState(parseRoute);
   const [currentView, setCurrentView] = useState(initialRoute.view);
   const [activeProductId, setActiveProductId] = useState(initialRoute.productId || null);
+  const [activePage, setActivePage] = useState(initialRoute.page || null);
   const [invoiceData, setInvoiceData] = useState(() => (
     initialRoute.invoiceId ? findTransactionByInvoiceId(initialRoute.invoiceId) : null
   ));
@@ -163,8 +176,15 @@ function App() {
         return;
       }
 
+      if (route.view === 'page') {
+        setActivePage(route.page);
+        setCurrentView('page');
+        return;
+      }
+
       setCurrentView('home');
       setActiveProductId(null);
+      setActivePage(null);
       setInvoiceData(null);
     };
 
@@ -204,6 +224,7 @@ function App() {
     if (view === 'home') {
       setCurrentView('home');
       setActiveProductId(null);
+      setActivePage(null);
       setInvoiceData(null);
       window.location.hash = '';
     } else if (view === 'order') {
@@ -214,11 +235,16 @@ function App() {
       }
       setCurrentView('order');
       setActiveProductId(data);
-      window.location.hash = `#/order/${data}`;
+      window.location.hash = `#/order/${encodeURIComponent(data)}`;
     } else if (view === 'invoice') {
+      if (!data?.invoiceId) {
+        setCurrentView('home');
+        window.location.hash = '';
+        return;
+      }
       setCurrentView('invoice');
       setInvoiceData(data);
-      window.location.hash = `#/invoice/${data.invoiceId}`;
+      window.location.hash = `#/invoice/${encodeURIComponent(data.invoiceId)}`;
     } else if (view === 'transactions') {
       if (!user) {
         setIsLoginOpen(true);
@@ -226,6 +252,10 @@ function App() {
       }
       setCurrentView('transactions');
       window.location.hash = '#/transactions';
+    } else if (view === 'page') {
+      setActivePage(data);
+      setCurrentView('page');
+      window.location.hash = data === 'blog' ? '#/blog' : `#/page/${encodeURIComponent(data || 'privacy')}`;
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -303,6 +333,12 @@ function App() {
         {currentView === 'transactions' && (
           <TransactionsView
             user={user}
+            onNavigate={handleNavigate}
+          />
+        )}
+        {currentView === 'page' && (
+          <PageView
+            page={activePage}
             onNavigate={handleNavigate}
           />
         )}
