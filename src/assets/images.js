@@ -22,6 +22,7 @@ import cimbImg from './payment/cimb.svg';
 import permatabankImg from './payment/permatabank.svg';
 import alfamartImg from './payment/alfamart.svg';
 import indomaretImg from './payment/indomaret.svg';
+import goisiinBalanceImg from './payment/goisiin-balance.svg';
 
 // --- PRODUCT IMAGES ---
 import mlImg from './product/mobile-legend.webp';
@@ -73,10 +74,11 @@ export const paymentImages = {
   permatabank: permatabankImg,
   alfamart: alfamartImg,
   indomaret: indomaretImg,
+  goisiinBalance: goisiinBalanceImg,
 };
 
 export const paymentLogoList = [
-  qrisImg, danaImg, gopayImg, ovoImg, shopeepayImg, linkajaImg,
+  goisiinBalanceImg, qrisImg, danaImg, gopayImg, ovoImg, shopeepayImg, linkajaImg,
   bcaImg, briImg, mandiriImg, bniImg, bsiImg, cimbImg,
   permatabankImg, alfamartImg, indomaretImg
 ];

@@ -13,6 +13,13 @@ import {
   revokeStampFromUser,
   updateRedemptionStatus,
 } from '../lib/stampService';
+import {
+  getWalletBalance,
+  getWalletLedger,
+  getWithdrawalRequests,
+  settleWalletEffectsForTransaction,
+  updateWithdrawalStatus,
+} from '../lib/walletService';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -31,6 +38,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const [adminTransactions, setAdminTransactions] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
   const [stampRefreshKey, setStampRefreshKey] = useState(0);
+  const [walletRefreshKey, setWalletRefreshKey] = useState(0);
   const [stampForm, setStampForm] = useState({ email: '', stampNo: 1 });
   const [stampAdminNotice, setStampAdminNotice] = useState('');
 
@@ -66,18 +74,28 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
 
   const handleUpdateTxStatus = (invoiceId, nextStatus) => {
     let stampResult = null;
+    let walletResult = null;
     const updated = adminTransactions.map(t => {
       if (t.invoiceId === invoiceId) {
-        const nextTx = { ...t, status: nextStatus };
+        const previousStatus = String(t.status || '').toLowerCase();
+        const nextTx = {
+          ...t,
+          status: nextStatus,
+          refundableAmount: nextStatus === 'failed' && previousStatus === 'success' && t.transactionType !== 'wallet_topup'
+            ? Number(t.total || 0)
+            : Number(t.refundableAmount || 0),
+        };
         if (nextStatus === 'success') stampResult = awardStampForTransaction(nextTx, adminUser?.email || adminUser?.name || 'admin');
+        walletResult = settleWalletEffectsForTransaction(nextTx, adminUser?.email || adminUser?.name || 'admin');
         return nextTx;
       }
       return t;
     });
     setAdminTransactions(updated);
     writeStorageList('goisiin_transactions', updated);
-    if (stampResult?.ok) {
+    if (stampResult?.ok || walletResult?.ok) {
       window.dispatchEvent(new Event('storage'));
+      setWalletRefreshKey((key) => key + 1);
     }
   };
 
@@ -270,6 +288,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const stampRedemptions = stampRefreshKey >= 0 ? getStampRedemptions() : [];
   const stampCodes = stampRefreshKey >= 0 ? getStampRedeemCodes() : [];
   const stampAuditLogs = stampRefreshKey >= 0 ? getStampAuditLogs() : [];
+  const walletLedger = walletRefreshKey >= 0 ? getWalletLedger() : [];
+  const withdrawalRequests = walletRefreshKey >= 0 ? getWithdrawalRequests() : [];
   const adminActor = adminUser?.email || adminUser?.name || 'admin';
 
   const handleAdminGrantStamp = (e) => {
@@ -646,9 +666,10 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
         )}
         {/* TAB 3: TRANSAKSI CUSTOMER */}
         {activeTab === 'transactions' && (
-          <div className="order-card p-3">
-            <h5 className="text-success fw-bold mb-3">Daftar Transaksi Customer</h5>
-            <div className="table-responsive">
+          <>
+            <div className="order-card p-3">
+              <h5 className="text-success fw-bold mb-3">Daftar Transaksi Customer</h5>
+              <div className="table-responsive">
               <table className="table table-dark table-striped table-hover align-middle" style={{ fontSize: '0.85rem' }}>
                 <thead>
                   <tr>
@@ -730,8 +751,69 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
-          </div>
+            <div className="order-card p-3 mt-3">
+              <h5 className="text-success fw-bold mb-3">Pengajuan Tarik Saldo Goisiin</h5>
+              <div className="table-responsive">
+                <table className="table table-dark table-striped align-middle" style={{ fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Tujuan</th>
+                      <th>Nominal</th>
+                      <th>Fee</th>
+                      <th>Diterima</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {withdrawalRequests.length === 0 ? (
+                      <tr><td colSpan="6" className="text-secondary text-center">Belum ada pengajuan tarik saldo.</td></tr>
+                    ) : withdrawalRequests.map((request) => (
+                      <tr key={request.id}>
+                        <td>{request.userEmail}<br /><small>{request.createdAt}</small></td>
+                        <td>{request.destinationType} · {request.provider}<br /><small>{request.accountName} / {request.accountNumber}</small></td>
+                        <td className="fw-bold">{formatRupiah(request.amount)}</td>
+                        <td>{formatRupiah(request.fee)}</td>
+                        <td className="text-success fw-bold">{formatRupiah(request.payoutAmount)}</td>
+                        <td>
+                          <select
+                            className="form-select form-select-sm order-input"
+                            value={request.status}
+                            onChange={(event) => {
+                              updateWithdrawalStatus(request.id, event.target.value, adminActor);
+                              setWalletRefreshKey((key) => key + 1);
+                            }}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="processing">Diproses</option>
+                            <option value="fulfilled">Selesai</option>
+                            <option value="rejected">Ditolak / Refund</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="order-card p-3 mt-3">
+              <h5 className="text-success fw-bold mb-3">Ledger Saldo Terbaru</h5>
+              <div className="stamp-admin-log">
+                {walletLedger.length === 0 ? (
+                  <p className="text-secondary">Belum ada aktivitas saldo.</p>
+                ) : walletLedger.slice(0, 30).map((entry) => (
+                  <div className="stamp-admin-log__item" key={entry.id}>
+                    <strong className={entry.delta > 0 ? 'text-success' : 'text-danger'}>
+                      {entry.delta > 0 ? '+' : ''}{formatRupiah(entry.delta)}
+                    </strong>
+                    <span>{entry.userEmail} · {entry.kind}<br />{entry.note} · {entry.createdAt}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         {/* TAB 4: AKUN PENGGUNA */}
@@ -745,13 +827,14 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     <th>Avatar</th>
                     <th>Nama Lengkap</th>
                     <th>Email Pengguna</th>
+                    <th>Saldo Goisiin</th>
                     <th>Tanggal Terdaftar / Login Terakhir</th>
                   </tr>
                 </thead>
                 <tbody>
                   {adminUsers.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="text-center py-4 text-secondary">Belum ada pengguna terdaftar.</td>
+                      <td colSpan="5" className="text-center py-4 text-secondary">Belum ada pengguna terdaftar.</td>
                     </tr>
                   ) : (
                     adminUsers.map((u, i) => (
@@ -768,6 +851,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                         </td>
                         <td className="fw-semibold text-white">{u.name}</td>
                         <td>{u.email}</td>
+                        <td className="text-success fw-bold">{formatRupiah(getWalletBalance(u.email))}</td>
                         <td>{u.lastLogin || 'N/A'}</td>
                       </tr>
                     ))

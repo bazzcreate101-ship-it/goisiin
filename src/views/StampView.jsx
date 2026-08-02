@@ -297,7 +297,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                   <span>{reward.tier}</span>
                   <h3>{reward.name}</h3>
                   <p>{reward.description}</p>
-                  <small>Stok awal: {reward.stock}</small>
+                  <small>Stok saat ini: {reward.stock}</small>
                 </div>
               </article>
             ))}
@@ -328,8 +328,8 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
           <div className="col-lg-6 col-12">
             <section className="order-card h-100">
               <span className="stamp-eyebrow">Penukaran</span>
-              <h2 className="stamp-section-title">Reveal hadiah</h2>
-              <p className="text-secondary mb-0">Setelah admin menentukan hadiah, spin akan berhenti di hadiah yang sudah dipilih.</p>
+              <h2 className="stamp-section-title">Hadiah saya</h2>
+              <div className="stamp-empty-state">Klaim hadiah akan muncul di sini setelah 6 stamp unik ditukar.</div>
             </section>
           </div>
         </div>

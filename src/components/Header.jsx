@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { logo } from '../assets/images';
 import { getStampSummary } from '../lib/stampService';
 import { readStorageList } from '../lib/storage';
+import { getWalletBalance } from '../lib/walletService';
 
 export default function Header({ 
   currentView, 
@@ -18,6 +19,7 @@ export default function Header({
   const successTransactions = userTransactions.filter((tx) => tx.status === 'success');
   const userPoints = successTransactions.reduce((sum, tx) => sum + Number(tx.points || 0), 0);
   const stampSummary = isLoggedIn ? getStampSummary(user.email) : null;
+  const walletBalance = isLoggedIn ? getWalletBalance(user.email) : 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -148,8 +150,8 @@ export default function Header({
                         <div className="wallet-tile tile-coin">
                           <div className="wallet-icon">🪙</div>
                           <div className="wallet-meta">
-                            <div className="wallet-title">G-Coin</div>
-                            <div className="wallet-value text-success">0</div>
+                            <div className="wallet-title">Saldo</div>
+                            <div className="wallet-value text-success">Rp{walletBalance.toLocaleString('id-ID')}</div>
                           </div>
                         </div>
                         <div className="wallet-tile tile-gp">

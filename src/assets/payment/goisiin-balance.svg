@@ -1,0 +1,13 @@
+<svg width="220" height="68" viewBox="0 0 220 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="220" height="68" rx="16" fill="#101827"/>
+  <rect x="7" y="7" width="206" height="54" rx="13" fill="url(#g)"/>
+  <path d="M43.7 18.4c-9.3 0-16.9 7.2-16.9 16.1s7.6 16.1 16.9 16.1c7.9 0 14.5-5.2 16.4-12.1H43.2v-8.2h27.1v3.9c0 14.2-11.8 25.8-26.6 25.8S17 48.4 17 34.5 28.9 8.8 43.7 8.8c7.3 0 13.9 2.8 18.7 7.3l-7.3 6.9c-2.9-2.8-6.9-4.6-11.4-4.6Z" fill="#A7D129"/>
+  <text x="82" y="31" fill="#F8FAFC" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="800">Saldo</text>
+  <text x="82" y="51" fill="#A7D129" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="900">Goisiin</text>
+  <defs>
+    <linearGradient id="g" x1="7" y1="7" x2="213" y2="61" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1F2A19"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+</svg>

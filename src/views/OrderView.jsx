@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { paymentChannels } from '../data/products';
 import { readStorageList, writeStorageList } from '../lib/storage';
 import { buildDynamicQrisPayload, makeRetailBarcodeValue } from '../lib/qris';
+import { debitWalletForPurchase, getWalletBalance } from '../lib/walletService';
+import { awardStampForTransaction } from '../lib/stampService';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 const cleanInput = (value, type) => {
@@ -33,6 +35,7 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
 
   const paymentCategories = [...new Set(paymentChannels.map(p => p.category))];
   const filteredPayments = paymentChannels.filter(p => p.category === paymentCategory);
+  const walletBalance = user?.email ? getWalletBalance(user.email) : 0;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -91,19 +94,28 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
       return;
     }
     if (!['qris', 'indomaret'].includes(selectedPayment.id)) {
-      setIsSubmitting(true);
-      setPaymentNotice('');
-      setTimeout(() => {
-        setIsSubmitting(false);
-        setPaymentNotice('Metode pembayaran ini sedang gangguan. Silakan coba beberapa saat lagi atau pilih metode lain.');
-      }, 1200);
-      return;
+      if (selectedPayment.id === 'goisiin_balance') {
+        const total = calcTotal();
+        if (walletBalance < total) {
+          setPaymentNotice(`Saldo Goisiin tidak cukup. Saldo kamu ${formatRupiah(walletBalance)}, total pesanan ${formatRupiah(total)}.`);
+          return;
+        }
+      } else {
+        setIsSubmitting(true);
+        setPaymentNotice('');
+        setTimeout(() => {
+          setIsSubmitting(false);
+          setPaymentNotice('Metode pembayaran ini sedang gangguan. Silakan coba beberapa saat lagi atau pilih metode lain.');
+        }, 1200);
+        return;
+      }
     }
     setIsSubmitting(true);
     // Small delay to simulate request
     setTimeout(() => {
       const invoiceId = 'GSI-' + Date.now().toString().slice(-8).toUpperCase();
       const total = calcTotal();
+      const isWalletPayment = selectedPayment.id === 'goisiin_balance';
       const invoiceData = {
         invoiceId,
         productId: product.id,
@@ -122,11 +134,23 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
         points: Number(selectedDenom.points || 0),
         createdAt: new Date().toLocaleString('id-ID'),
         expiresAt: Date.now() + 60 * 60 * 1000,
-        status: 'pending',
+        status: isWalletPayment ? 'success' : 'pending',
         userEmail: user.email,
         qrisPayload: selectedPayment.id === 'qris' ? buildDynamicQrisPayload(total) : null,
         retailBarcode: selectedPayment.id === 'indomaret' ? makeRetailBarcodeValue(invoiceId) : null,
+        walletDebited: isWalletPayment,
+        refundableAmount: isWalletPayment ? total : 0,
       };
+
+      if (isWalletPayment) {
+        const debitResult = debitWalletForPurchase(invoiceData);
+        if (!debitResult.ok) {
+          setIsSubmitting(false);
+          setPaymentNotice('Saldo Goisiin tidak cukup atau sedang tidak bisa dipakai. Coba top up saldo dulu.');
+          return;
+        }
+        awardStampForTransaction(invoiceData, 'wallet-payment');
+      }
 
       // Simpan transaksi ke localStorage
       const list = readStorageList('goisiin_transactions');
@@ -257,6 +281,12 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
                 </h5>
                 {errors.payment && <div className="alert alert-danger py-1 px-2 mb-2" style={{ fontSize: '0.83rem' }}>{errors.payment}</div>}
                 {paymentNotice && <div className="alert alert-warning py-2 px-3 mb-2" style={{ fontSize: '0.84rem' }}>{paymentNotice}</div>}
+                {user?.email && (
+                  <div className="wallet-payment-hint mb-2">
+                    <i className="bi bi-wallet2"></i>
+                    Saldo Goisiin kamu: <strong>{formatRupiah(walletBalance)}</strong>
+                  </div>
+                )}
 
                 {/* Category Tabs */}
                 <div className="payment-tabs mb-3">

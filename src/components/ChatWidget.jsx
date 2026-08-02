@@ -3,6 +3,7 @@ import { paymentChannels } from '../data/products';
 import { STAMP_MIN_TRANSACTION, stampRewards, stampTypes } from '../data/stampRewards';
 import { promoInfo, siteMechanics, supportInfo } from '../data/siteInfo';
 import { safeJsonParse } from '../lib/storage';
+import { getWalletBalance, getWalletEntries, getWithdrawalRequests } from '../lib/walletService';
 
 const MAX_MESSAGE_LENGTH = 600;
 const CLIENT_COOLDOWN_MS = 1800;
@@ -76,7 +77,14 @@ export default function ChatWidget({ products, user, transactions }) {
     }
   };
 
-  const buildChatContext = () => ({
+  const buildChatContext = () => {
+    const walletBalance = user?.email ? getWalletBalance(user.email) : 0;
+    const walletEntries = user?.email ? getWalletEntries(user.email).slice(0, 12) : [];
+    const withdrawals = user?.email
+      ? getWithdrawalRequests().filter((request) => request.userEmail === user.email).slice(0, 12)
+      : [];
+
+    return ({
     user: user ? { name: user.name, email: user.email } : null,
     products: products.map((product) => ({
       id: product.id,
@@ -95,6 +103,23 @@ export default function ChatWidget({ products, user, transactions }) {
       feeFlat: channel.feeFlat,
     })),
     transactions,
+    wallet: {
+      balance: walletBalance,
+      topupMin: 50000,
+      topupMax: 5000000,
+      topupMethod: 'QRIS only',
+      withdrawalMin: 100000,
+      withdrawalFeePercent: 0.7,
+      rules: [
+        'Saldo Goisiin bisa dipakai untuk checkout jika saldo cukup.',
+        'Jika saldo tidak cukup, user harus top up saldo atau pilih metode pembayaran lain.',
+        'Top up saldo Goisiin hanya melalui QRIS, minimal Rp50.000 dan maksimal Rp5.000.000.',
+        'Transaksi gagal yang sudah mendebit dana akan refund otomatis ke Saldo Goisiin.',
+        'Tarik saldo bisa ke e-wallet atau bank, minimal Rp100.000, fee 0,7%.',
+      ],
+      entries: walletEntries,
+      withdrawals,
+    },
     promos: promoInfo,
     mechanics: siteMechanics,
     stampPromo: {
@@ -114,7 +139,8 @@ export default function ChatWidget({ products, user, transactions }) {
       })),
     },
     support: supportInfo,
-  });
+    });
+  };
 
   const handoffToAdmin = (baseMessages, text = 'Chat dialihkan ke Admin CS Goisiin. Kakak sedang terhubung dengan antrean admin.') => {
     const sysMsg = {

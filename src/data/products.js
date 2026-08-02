@@ -312,6 +312,14 @@ export const products = [
 
 export const paymentChannels = [
   {
+    id: 'goisiin_balance',
+    category: 'Saldo',
+    name: 'Saldo Goisiin',
+    image: paymentImages.goisiinBalance,
+    feePercent: 0,
+    feeFlat: 0
+  },
+  {
     id: 'qris',
     category: 'QRIS',
     name: 'QRIS',

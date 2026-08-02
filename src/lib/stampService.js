@@ -141,8 +141,9 @@ export function awardStampForTransaction(transaction, actor = 'system') {
   const invoiceId = String(transaction?.invoiceId || '');
   const total = Number(transaction?.total || 0);
   const status = String(transaction?.status || '').toLowerCase();
+  const transactionType = String(transaction?.transactionType || '').toLowerCase();
 
-  if (!userEmail || !invoiceId || status !== 'success' || total < STAMP_MIN_TRANSACTION) {
+  if (!userEmail || !invoiceId || transactionType === 'wallet_topup' || status !== 'success' || total < STAMP_MIN_TRANSACTION) {
     return { ok: false, reason: 'not_eligible' };
   }
 

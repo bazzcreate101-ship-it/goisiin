@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { safeJsonParse } from '../lib/storage';
 import { awardStampForTransaction } from '../lib/stampService';
 import { buildDynamicQrisPayload } from '../lib/qris';
+import { settleWalletEffectsForTransaction } from '../lib/walletService';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
@@ -21,6 +22,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
         if (found) {
           setPaymentStatus(found.status);
           if (found.status === 'success') awardStampForTransaction(found, 'invoice-check');
+          settleWalletEffectsForTransaction(found, 'invoice-check');
         }
       }
     }
@@ -60,7 +62,9 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
             const list = safeJsonParse(saved, []);
             const updated = list.map(t => {
               if (t.invoiceId === invoiceData?.invoiceId) {
-                return { ...t, status: 'failed' };
+                const failedTx = { ...t, status: 'failed' };
+                settleWalletEffectsForTransaction(failedTx, 'invoice-timeout');
+                return failedTx;
               }
               return t;
             });
@@ -95,9 +99,10 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
       const saved = localStorage.getItem('goisiin_transactions');
       const list = safeJsonParse(saved, []);
       const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
-      const nextStatus = found?.status === 'success' ? 'success' : 'pending';
+      const nextStatus = ['success', 'failed'].includes(found?.status) ? found.status : 'pending';
       setPaymentStatus(nextStatus);
       if (nextStatus === 'success') awardStampForTransaction(found, 'invoice-check');
+      if (found) settleWalletEffectsForTransaction(found, 'invoice-check');
     }, 2500);
   };
 
