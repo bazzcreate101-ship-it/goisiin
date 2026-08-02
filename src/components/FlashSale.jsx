@@ -5,7 +5,7 @@ const flashSaleItems = [
     productId: 'higgs-game-island',
     name: 'Higgs Game Island',
     meta: 'Tukar Kartu (1B)',
-    image: '/assets/product/higgs-game-island.webp',
+    image: '/gassets/product/higgs-game-island.webp',
     originalPrice: 'Rp 64.000',
     price: 'Rp 63.360'
   },
@@ -13,7 +13,7 @@ const flashSaleItems = [
     productId: 'higgs-game-island',
     name: 'Higgs Game Island',
     meta: 'Tukar Kartu (2B)',
-    image: '/assets/product/higgs-game-island.webp',
+    image: '/gassets/product/higgs-game-island.webp',
     originalPrice: 'Rp 128.000',
     price: 'Rp 126.720'
   },
@@ -21,7 +21,7 @@ const flashSaleItems = [
     productId: 'higgs-game-island',
     name: 'Higgs Game Island',
     meta: 'Tukar Kartu (3B)',
-    image: '/assets/product/higgs-game-island.webp',
+    image: '/gassets/product/higgs-game-island.webp',
     originalPrice: 'Rp 192.000',
     price: 'Rp 190.080'
   },
@@ -29,7 +29,7 @@ const flashSaleItems = [
     productId: 'mobile-legend',
     name: 'Mobile Legend',
     meta: '250 Diamonds',
-    image: '/assets/product/mobile-legend.webp',
+    image: '/gassets/product/mobile-legend.webp',
     originalPrice: 'Rp 77.000',
     price: 'Rp 69.300'
   },
@@ -37,7 +37,7 @@ const flashSaleItems = [
     productId: 'free-fire',
     name: 'Free Fire',
     meta: '355 Diamonds',
-    image: '/assets/product/free-fire.webp',
+    image: '/gassets/product/free-fire.webp',
     originalPrice: 'Rp 55.000',
     price: 'Rp 49.500'
   },
@@ -45,7 +45,7 @@ const flashSaleItems = [
     productId: 'valorant',
     name: 'Valorant',
     meta: '1000 VP',
-    image: '/assets/product/valorant.webp',
+    image: '/gassets/product/valorant.webp',
     originalPrice: 'Rp 120.000',
     price: 'Rp 108.000'
   }
@@ -146,4 +146,5 @@ export default function FlashSale({ onSelectProduct }) {
     </section>
   );
 }
+
 

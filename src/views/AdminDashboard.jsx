@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -141,7 +141,7 @@ export default function AdminDashboard({ products, onUpdateProducts, onNavigate 
         id: newId,
         name: formData.name,
         category: formData.category,
-        image: '/assets/product/mobile-legend.webp', // Default fallback icon
+        image: '/gassets/product/mobile-legend.webp', // Default fallback icon
         popular: formData.popular,
         discount: formData.discount,
         inputLabel: formData.inputLabel,
@@ -527,3 +527,4 @@ export default function AdminDashboard({ products, onUpdateProducts, onNavigate 
     </div>
   );
 }
+

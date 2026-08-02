@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { products, paymentChannels } from '../data/products';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
@@ -305,4 +305,5 @@ export default function OrderView({ productId, onNavigate }) {
     </div>
   );
 }
+
 

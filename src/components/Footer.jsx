@@ -1,21 +1,21 @@
 ﻿import React from 'react';
 
 const paymentLogos = [
-  "/assets/payment/qris.svg",
-  "/assets/payment/dana.svg",
-  "/assets/payment/gopay.svg",
-  "/assets/payment/ovo.svg",
-  "/assets/payment/shopeepay.svg",
-  "/assets/payment/linkaja.svg",
-  "/assets/payment/bca.svg",
-  "/assets/payment/bri.svg",
-  "/assets/payment/mandiri.svg",
-  "/assets/payment/bni.svg",
-  "/assets/payment/bsi.svg",
-  "/assets/payment/cimb.svg",
-  "/assets/payment/permatabank.svg",
-  "/assets/payment/alfamart.svg",
-  "/assets/payment/indomaret.svg"
+  "/gassets/payment/qris.svg",
+  "/gassets/payment/dana.svg",
+  "/gassets/payment/gopay.svg",
+  "/gassets/payment/ovo.svg",
+  "/gassets/payment/shopeepay.svg",
+  "/gassets/payment/linkaja.svg",
+  "/gassets/payment/bca.svg",
+  "/gassets/payment/bri.svg",
+  "/gassets/payment/mandiri.svg",
+  "/gassets/payment/bni.svg",
+  "/gassets/payment/bsi.svg",
+  "/gassets/payment/cimb.svg",
+  "/gassets/payment/permatabank.svg",
+  "/gassets/payment/alfamart.svg",
+  "/gassets/payment/indomaret.svg"
 ];
 
 export default function Footer({ onNavigate }) {
@@ -79,4 +79,5 @@ export default function Footer({ onNavigate }) {
     </footer>
   );
 }
+
 

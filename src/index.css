@@ -1,4 +1,4 @@
-/* --- Root Colors and Fonts --- */
+﻿/* --- Root Colors and Fonts --- */
 :root {
   --first-color: #6aaa4a;
   --glass-bg: rgba(31, 41, 55, 0.94);
@@ -2815,5 +2815,6 @@ footer a:hover {
     bottom: 84px;
   }
 }
+
 
 

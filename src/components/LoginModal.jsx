@@ -1,88 +1,31 @@
-import React, { useEffect, useRef } from 'react';
-
-// =====================================================
-// CARA SETUP GOOGLE LOGIN:
-// 1. Buka https://console.cloud.google.com/
-// 2. Buat project baru (atau pilih yang ada)
-// 3. Pergi ke "APIs & Services" → "Credentials"
-// 4. Klik "Create Credentials" → "OAuth 2.0 Client ID"
-// 5. Application type: "Web application"
-// 6. Tambahkan Authorized JavaScript origins:
-//    - http://localhost:5173 (untuk development)
-//    - https://domain-kamu.com (untuk production)
-// 7. Copy "Client ID" dan paste di bawah
-// =====================================================
-const GOOGLE_CLIENT_ID = 'PASTE_YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com';
+import React, { useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
-  const googleBtnRef = useRef(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // Load Google Identity Services SDK
-    const loadGoogleScript = () => {
-      if (window.google?.accounts) {
-        initGoogle();
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = initGoogle;
-      document.head.appendChild(script);
-    };
-
-    const initGoogle = () => {
-      if (!window.google?.accounts || !googleBtnRef.current) return;
-
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-
-      window.google.accounts.id.renderButton(googleBtnRef.current, {
-        type: 'standard',
-        shape: 'pill',
-        theme: 'outline',
-        text: 'signin_with',
-        size: 'large',
-        logo_alignment: 'left',
-        width: 280,
-      });
-    };
-
-    loadGoogleScript();
-  }, [isOpen]);
-
-  const handleCredentialResponse = (response) => {
-    // Decode JWT token dari Google
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    const userData = {
-      name: payload.name,
-      email: payload.email,
-      picture: payload.picture,
-      sub: payload.sub,
-    };
-    onLoginSuccess(userData);
-    onClose();
-  };
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const isDemoMode = GOOGLE_CLIENT_ID.includes('PASTE_YOUR');
-
-  const handleDemoLogin = () => {
-    const mockUser = {
-      name: 'Bagas Pratama',
-      email: 'bagas.pratama@gmail.com',
-      picture: 'https://ui-avatars.com/api/?name=Bagas+Pratama&background=fbbf24&color=000&bold=true',
-    };
-    onLoginSuccess(mockUser);
-    onClose();
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: { access_type: 'offline', prompt: 'consent' }
+        }
+      });
+      if (authError) throw authError;
+      onClose();
+    } catch (err) {
+      console.error('Google Login error:', err);
+      setError('Login gagal. Pastikan Supabase sudah dikonfigurasi dengan benar.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -109,19 +52,19 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               <ul className="auth-modal__perks">
                 <li className="auth-modal__perk">
                   <span className="auth-modal__perk-icon">
-                    <img src="/assets/icon/article-svgrepo-com.svg" alt="" onError={(e) => e.target.style.display='none'} />
+                    <img src="/gassets/icon/article-svgrepo-com.svg" alt="" onError={(e) => e.target.style.display='none'} />
                   </span>
                   <p className="auth-modal__perk-text">Pantau dan simpan riwayat transaksi kamu kapan saja.</p>
                 </li>
                 <li className="auth-modal__perk">
                   <span className="auth-modal__perk-icon">
-                    <img src="/assets/icon/gift-svgrepo-com.svg" alt="" onError={(e) => e.target.style.display='none'} />
+                    <img src="/gassets/icon/gift-svgrepo-com.svg" alt="" onError={(e) => e.target.style.display='none'} />
                   </span>
                   <p className="auth-modal__perk-text">Jadi yang pertama tahu info promo seru dan kumpulkan hadiah.</p>
                 </li>
                 <li className="auth-modal__perk">
                   <span className="auth-modal__perk-icon">
-                    <img src="/assets/icon/cell-phone-svgrepo-com.svg" alt="" onError={(e) => e.target.style.display='none'} />
+                    <img src="/gassets/icon/cell-phone-svgrepo-com.svg" alt="" onError={(e) => e.target.style.display='none'} />
                   </span>
                   <p className="auth-modal__perk-text">Hubungi tim bantuan lebih mudah ketika ada kendala.</p>
                 </li>
@@ -136,33 +79,44 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
               </div>
 
               <div className="auth-modal__google">
-                {isDemoMode ? (
-                  // Demo mode — tampilkan tombol simulasi
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                    <button type="button" className="google-signin-btn" onClick={handleDemoLogin}>
-                      <img src="/assets/icon/google-color-svgrepo-com.svg" alt="Google" width="20" height="20"
-                        onError={(e) => { e.target.src='https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg'; }}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <button
+                    type="button"
+                    className="google-signin-btn"
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                    id="btn-google-signin"
+                  >
+                    {loading ? (
+                      <span className="spinner-border spinner-border-sm me-2" role="status" />
+                    ) : (
+                      <img
+                        src="/gassets/icon/google-color-svgrepo-com.svg"
+                        alt="Google"
+                        width="20"
+                        height="20"
+                        onError={(e) => { e.target.src = 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg'; }}
                         style={{ marginRight: '8px' }}
                       />
-                      Sign in with Google
-                    </button>
+                    )}
+                    {loading ? 'Mengarahkan...' : 'Sign in with Google'}
+                  </button>
+
+                  {error && (
                     <div style={{
-                      background: 'rgba(251,191,36,0.12)',
-                      border: '1px solid rgba(251,191,36,0.3)',
+                      background: 'rgba(239,68,68,0.12)',
+                      border: '1px solid rgba(239,68,68,0.3)',
                       borderRadius: '8px',
                       padding: '8px 12px',
-                      fontSize: '0.72rem',
-                      color: '#fde68a',
+                      fontSize: '0.78rem',
+                      color: '#fca5a5',
                       textAlign: 'center',
                       maxWidth: '260px'
                     }}>
-                      ⚠️ <strong>Demo Mode</strong> — untuk Google Login nyata, daftarkan Client ID di Google Cloud Console
+                      ⚠️ {error}
                     </div>
-                  </div>
-                ) : (
-                  // Google Identity Services real button
-                  <div ref={googleBtnRef} id="google-signin-btn"></div>
-                )}
+                  )}
+                </div>
               </div>
 
               <p className="auth-modal__terms">
@@ -178,4 +132,3 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
     </div>
   );
 }
-

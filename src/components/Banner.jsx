@@ -1,12 +1,12 @@
 ﻿import React, { useState, useEffect } from 'react';
 
 const bannerImages = [
-  "/assets/banner/slide_1769171315.webp",
-  "/assets/banner/slide_1773165603.webp",
-  "/assets/banner/slide_1767514787.webp",
-  "/assets/banner/slide_1765284294.webp",
-  "/assets/banner/slide_1753019433.webp",
-  "/assets/banner/slide_1751769782.webp"
+  "/gassets/banner/slide_1769171315.webp",
+  "/gassets/banner/slide_1773165603.webp",
+  "/gassets/banner/slide_1767514787.webp",
+  "/gassets/banner/slide_1765284294.webp",
+  "/gassets/banner/slide_1753019433.webp",
+  "/gassets/banner/slide_1751769782.webp"
 ];
 
 export default function Banner() {
@@ -64,4 +64,5 @@ export default function Banner() {
     </div>
   );
 }
+
 

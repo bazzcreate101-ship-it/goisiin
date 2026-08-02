@@ -9,6 +9,7 @@ import InvoiceView from './views/InvoiceView';
 import AdminDashboard from './views/AdminDashboard';
 import ChatWidget from './components/ChatWidget';
 import { products as initialProducts } from './data/products';
+import { supabase } from './lib/supabaseClient';
 
 function App() {
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'order' | 'invoice' | 'admin'
@@ -24,10 +25,39 @@ function App() {
     return saved ? JSON.parse(saved) : initialProducts;
   });
 
+  // Listen for Supabase Auth state changes (Google Login Session)
+  useEffect(() => {
+    // 1. Ambil session aktif saat pertama dimuat
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata.full_name || session.user.email,
+          email: session.user.email,
+          picture: session.user.user_metadata.avatar_url || 'https://lh3.googleusercontent.com/a/default-user=s100'
+        });
+      }
+    });
+
+    // 2. Dengarkan perubahan event login/logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata.full_name || session.user.email,
+          email: session.user.email,
+          picture: session.user.user_metadata.avatar_url || 'https://lh3.googleusercontent.com/a/default-user=s100'
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   // Listen to hash change for admin access
   useEffect(() => {
     const handleHashChange = () => {
-      if (window.location.hash === '#/bolehnihadmin') {
+      if (window.location.hash === '#/bolehnihadmin' || window.location.pathname === '/bolehnihadmin') {
         setCurrentView('admin');
       } else if (currentView === 'admin') {
         setCurrentView('home');
@@ -40,6 +70,11 @@ function App() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [currentView]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
   const handleUpdateProducts = (newProducts) => {
     setProducts(newProducts);
@@ -84,7 +119,7 @@ function App() {
         isSearchOpen={isSearchOpen}
         onLoginOpen={() => setIsLoginOpen(true)}
         user={user}
-        onLogout={() => setUser(null)}
+        onLogout={handleLogout}
         onNavigate={handleNavigate}
       />
 
@@ -140,4 +175,5 @@ function App() {
 }
 
 export default App;
+
 
