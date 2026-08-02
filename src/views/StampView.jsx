@@ -292,7 +292,9 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
           <div className="reward-grid">
             {stampRewards.map((reward) => (
               <article className={`reward-card ${reward.tier === 'Hadiah Utama' ? 'reward-card--main' : ''}`} key={reward.id}>
-                <img src={reward.image} alt={reward.name} />
+                <div className="reward-card__media">
+                  <img src={reward.image} alt={reward.name} />
+                </div>
                 <div>
                   <span>{reward.tier}</span>
                   <h3>{reward.name}</h3>
@@ -366,7 +368,9 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                         )}
                         {(isVisibleResult || redemption.status === 'claimed' || redemption.status === 'fulfilled') && (
                           <div className="stamp-result">
-                            <img src={reward.image} alt={reward.name} />
+                            <div className="reward-card__media">
+                              <img src={reward.image} alt={reward.name} />
+                            </div>
                             <div>
                               <span>{reward.tier}</span>
                               <h3>{reward.name}</h3>
