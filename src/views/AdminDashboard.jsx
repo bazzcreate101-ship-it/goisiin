@@ -34,6 +34,9 @@ const initialCategories = [
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 const cleanAdminText = (value, limit = 160) => String(value ?? '').trim().replace(/[<>`{}]/g, '').slice(0, limit);
+const randomRestockValue = () => Math.floor(Math.random() * 18) + 8;
+const hasManagedStock = (product) => product.denominations?.some((denom) => Number.isFinite(Number(denom.stock)));
+const countLowStockItems = (product) => product.denominations?.filter((denom) => Number.isFinite(Number(denom.stock)) && Number(denom.stock) < 3).length || 0;
 
 export default function AdminDashboard({ products, onUpdateProducts, adminUser, onLogout }) {
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'transactions' | 'users' | 'chats'
@@ -49,6 +52,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   // Product state
   const [editingProduct, setEditingProduct] = useState(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [productAdminNotice, setProductAdminNotice] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     category: '1',
@@ -223,6 +227,53 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       product.id === productId ? { ...product, active: product.active === false } : product
     ));
     onUpdateProducts(updated);
+  };
+
+  const handleActivateAllProducts = () => {
+    const updated = products.map((product) => ({ ...product, active: true }));
+    onUpdateProducts(updated);
+    setProductAdminNotice('Semua produk sudah diaktifkan.');
+  };
+
+  const restockLowStockProduct = (product) => {
+    let changed = 0;
+    const denominations = product.denominations.map((denom) => {
+      const currentStock = Number(denom.stock);
+      if (Number.isFinite(currentStock) && currentStock < 3) {
+        changed += 1;
+        return { ...denom, stock: randomRestockValue() };
+      }
+      return denom;
+    });
+    return { product: { ...product, denominations }, changed };
+  };
+
+  const handleAutoRestockProduct = (productId) => {
+    let changed = 0;
+    const updated = products.map((product) => {
+      if (product.id !== productId || !hasManagedStock(product)) return product;
+      const result = restockLowStockProduct(product);
+      changed += result.changed;
+      return result.product;
+    });
+    onUpdateProducts(updated);
+    setProductAdminNotice(changed > 0
+      ? `Auto restock berhasil untuk ${changed} nominal stok rendah.`
+      : 'Tidak ada nominal stok rendah di produk ini.');
+  };
+
+  const handleAutoRestockAll = () => {
+    let changed = 0;
+    const updated = products.map((product) => {
+      if (!hasManagedStock(product)) return product;
+      const result = restockLowStockProduct(product);
+      changed += result.changed;
+      return result.product;
+    });
+    onUpdateProducts(updated);
+    setProductAdminNotice(changed > 0
+      ? `Auto restock semua berhasil. ${changed} nominal stok rendah diisi random 8-25.`
+      : 'Tidak ada nominal dengan stok di bawah 3.');
   };
 
   const handleSaveProduct = (e) => {
@@ -408,14 +459,27 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
             {/* List Produk */}
             <div className={editingProduct || isAddingProduct ? 'col-md-5 col-12' : 'col-12'}>
               <div className="order-card p-3">
-                <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
                   <h5 className="text-success m-0 fw-bold">Daftar Produk</h5>
-                  {!isAddingProduct && !editingProduct && (
-                    <button className="btn btn-success btn-sm" onClick={handleStartAddProduct}>
-                      <i className="bi bi-plus-lg me-1"></i> Tambah Produk
+                  <div className="d-flex gap-2 flex-wrap">
+                    <button className="btn btn-outline-success btn-sm" onClick={handleActivateAllProducts}>
+                      <i className="bi bi-check2-circle me-1"></i> Aktifkan Semua
                     </button>
-                  )}
+                    <button className="btn btn-outline-warning btn-sm" onClick={handleAutoRestockAll}>
+                      <i className="bi bi-arrow-repeat me-1"></i> Auto Restock Semua
+                    </button>
+                    {!isAddingProduct && !editingProduct && (
+                      <button className="btn btn-success btn-sm" onClick={handleStartAddProduct}>
+                        <i className="bi bi-plus-lg me-1"></i> Tambah Produk
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {productAdminNotice && (
+                  <div className="alert alert-success py-2 px-3 mb-3" style={{ fontSize: '0.82rem' }}>
+                    {productAdminNotice}
+                  </div>
+                )}
 
                 <div className="table-responsive" style={{ maxHeight: '500px', overflowY: 'auto' }}>
                   <table className="table table-dark table-striped table-hover align-middle" style={{ fontSize: '0.85rem' }}>
@@ -441,7 +505,12 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                                 className="rounded"
                                 onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
                               />
-                              <span>{p.name}</span>
+                              <span>
+                                {p.name}
+                                {countLowStockItems(p) > 0 && (
+                                  <small className="d-block text-warning">{countLowStockItems(p)} nominal stok &lt; 3</small>
+                                )}
+                              </span>
                             </div>
                           </td>
                           <td>
@@ -466,6 +535,16 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                               >
                                 <i className={`bi ${p.active === false ? 'bi-eye-fill' : 'bi-eye-slash-fill'}`}></i>
                               </button>
+                              {hasManagedStock(p) && (
+                                <button
+                                  className="btn btn-outline-info btn-sm p-1 px-2"
+                                  onClick={() => handleAutoRestockProduct(p.id)}
+                                  aria-label="Auto restock produk"
+                                  title="Isi ulang nominal stok di bawah 3 dengan angka random 8-25"
+                                >
+                                  <i className="bi bi-arrow-repeat"></i>
+                                </button>
+                              )}
                               <button className="btn btn-outline-danger btn-sm p-1 px-2" onClick={() => handleDeleteProduct(p.id)} aria-label="Hapus">
                                 <i className="bi bi-trash-fill"></i>
                               </button>

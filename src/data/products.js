@@ -270,7 +270,7 @@ export const products = [
     active: true,
     discount: 'TOOLS AI',
     cardLabel: 'Akun AI',
-    description: 'Katalog akun AI premium seperti ChatGPT, Claude, Gemini, Grok, Perplexity, Kiro, Leonardo, Kling, dan Dola AI. Pilihan Private tersedia sesuai stok, sedangkan Sharing disiapkan dengan stok 0 sementara.',
+    description: 'Katalog akun AI premium untuk kebutuhan kerja, belajar, coding, riset, penulisan, dan produktivitas harian. Pilih paket yang sesuai, isi WhatsApp serta email penerima, lalu detail akun akan diproses setelah pembayaran berhasil.',
     inputLabel: 'Masukkan WhatsApp aktif dan email penerima untuk pengiriman akun AI',
     inputFields: [
       { name: 'whatsapp', placeholder: 'Nomor WhatsApp aktif', type: 'number' },

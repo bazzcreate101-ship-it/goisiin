@@ -43,6 +43,28 @@ export function normalizeStoredProducts(savedProducts, fallbackProducts) {
   fallbackProducts.forEach((product) => {
     if (!mergedById.has(product.id)) {
       mergedById.set(product.id, normalize(product));
+      return;
+    }
+
+    const savedProduct = mergedById.get(product.id);
+    const savedText = JSON.stringify(savedProduct).toLowerCase();
+    const shouldReplaceStaleAiCatalog = product.id === 'kebutuhan-ai' && (
+      savedText.includes('sharing') ||
+      savedText.includes('sementara') ||
+      savedText.includes('kiro') ||
+      savedText.includes('leonardo') ||
+      savedText.includes('kling') ||
+      savedText.includes('perplexity') ||
+      savedText.includes('dola ai') ||
+      savedText.includes('grok super')
+    );
+
+    if (shouldReplaceStaleAiCatalog) {
+      mergedById.set(product.id, normalize({
+        ...product,
+        active: savedProduct.active !== false,
+        popular: savedProduct.popular ?? product.popular,
+      }));
     }
   });
 
