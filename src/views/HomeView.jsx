@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import Banner from '../components/Banner';
 import FlashSale from '../components/FlashSale';
 import Categories from '../components/Categories';
@@ -104,7 +104,7 @@ export default function HomeView({ onSelectProduct }) {
           <div className="news-card-track">
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
               <div className="news-card-thumb">
-                <img src="https://pusat.grv.co.id/image/banner/slide_1769171315.webp" alt="News 1" />
+                <img src="/assets/banner/slide_1769171315.webp" alt="News 1" />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Promo Diamond Mobile Legends Merdeka 2026</h4>
@@ -114,7 +114,7 @@ export default function HomeView({ onSelectProduct }) {
             </a>
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
               <div className="news-card-thumb">
-                <img src="https://pusat.grv.co.id/image/banner/slide_1773165603.webp" alt="News 2" />
+                <img src="/assets/banner/slide_1773165603.webp" alt="News 2" />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Event Top Up Free Fire x Spider-Man</h4>
@@ -124,7 +124,7 @@ export default function HomeView({ onSelectProduct }) {
             </a>
             <a href="https://garudavoucher.id/blog/" target="_blank" rel="noreferrer" className="news-card">
               <div className="news-card-thumb">
-                <img src="https://pusat.grv.co.id/image/banner/slide_1767514787.webp" alt="News 3" />
+                <img src="/assets/banner/slide_1767514787.webp" alt="News 3" />
               </div>
               <div className="news-card-content">
                 <h4 className="news-card-title">Tips Aman Top Up Akun Game Online</h4>

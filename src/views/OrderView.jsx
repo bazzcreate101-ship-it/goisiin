@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { products, paymentChannels } from '../data/products';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
@@ -116,7 +116,7 @@ export default function OrderView({ productId, onNavigate }) {
                   <img src={product.image} alt={product.name} className="order-product-img" />
                   <div>
                     <h2 className="order-product-name">{product.name}</h2>
-                    <span className="badge bg-warning text-dark">Top Up Instan</span>
+                    <span className="badge bg-success text-white">Top Up Instan</span>
                     {product.discount && <span className="badge bg-danger ms-1">{product.discount}</span>}
                   </div>
                 </div>

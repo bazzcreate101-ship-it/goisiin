@@ -1,4 +1,4 @@
-﻿export const categories = [
+export const categories = [
   { id: 'popular', name: 'Populer' },
   { id: '1', name: 'Top up Game' },
   { id: '2', name: 'Voucher Game' },
@@ -341,6 +341,22 @@ export const paymentChannels = [
     feeFlat: 0
   },
   {
+    id: 'shopeepay',
+    category: 'E-Wallet',
+    name: 'ShopeePay',
+    image: '/assets/payment/shopeepay.svg',
+    feePercent: 0.01,
+    feeFlat: 0
+  },
+  {
+    id: 'linkaja',
+    category: 'E-Wallet',
+    name: 'LinkAja',
+    image: '/assets/payment/linkaja.svg',
+    feePercent: 0.01,
+    feeFlat: 0
+  },
+  {
     id: 'bca',
     category: 'Bank Transfer',
     name: 'BCA Virtual Account',
@@ -365,10 +381,50 @@ export const paymentChannels = [
     feeFlat: 2000
   },
   {
+    id: 'bni',
+    category: 'Bank Transfer',
+    name: 'BNI Virtual Account',
+    image: '/assets/payment/bni.svg',
+    feePercent: 0,
+    feeFlat: 2000
+  },
+  {
+    id: 'bsi',
+    category: 'Bank Transfer',
+    name: 'BSI Virtual Account',
+    image: '/assets/payment/bsi.svg',
+    feePercent: 0,
+    feeFlat: 2000
+  },
+  {
+    id: 'cimb',
+    category: 'Bank Transfer',
+    name: 'CIMB Virtual Account',
+    image: '/assets/payment/cimb.svg',
+    feePercent: 0,
+    feeFlat: 2000
+  },
+  {
+    id: 'permatabank',
+    category: 'Bank Transfer',
+    name: 'Permata Virtual Account',
+    image: '/assets/payment/permatabank.svg',
+    feePercent: 0,
+    feeFlat: 2000
+  },
+  {
     id: 'alfamart',
     category: 'Retail',
     name: 'Alfamart',
     image: '/assets/payment/alfamart.svg',
+    feePercent: 0,
+    feeFlat: 3500
+  },
+  {
+    id: 'indomaret',
+    category: 'Retail',
+    name: 'Indomaret',
+    image: '/assets/payment/indomaret.svg',
     feePercent: 0,
     feeFlat: 3500
   }

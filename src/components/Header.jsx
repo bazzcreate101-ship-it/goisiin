@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 
 export default function Header({ 
   currentView, 
@@ -26,8 +26,10 @@ export default function Header({
         <div className="container col-md-8 col-12 d-flex align-items-center justify-content-between">
           
           {/* BRAND */}
-          <a href="#" onClick={(e) => handleNavClick('home', e)} className="navbar-brand flex-shrink-1">
-            <img className="img-logo" src="/assets/logo.png" alt="Goisiin Indonesia" />
+          <a href="#" onClick={(e) => handleNavClick('home', e)} className="navbar-brand flex-shrink-1 d-flex align-items-center gap-2" style={{ textDecoration: 'none' }}>
+            <span className="brand-text" style={{ fontFamily: "'Oxanium', sans-serif", fontSize: '1.5rem', fontWeight: '800', color: '#fff', letterSpacing: '1px' }}>
+              GOI<span style={{ color: '#6aaa4a' }}>SIIN</span>
+            </span>
           </a>
 
           {/* MENU UTAMA */}
