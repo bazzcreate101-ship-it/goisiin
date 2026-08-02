@@ -3,21 +3,24 @@ import { supabase } from '../lib/supabaseClient';
 import { icons } from '../assets/images';
 
 
-export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
+export default function LoginModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cooldownUntil, setCooldownUntil] = useState(0);
 
   if (!isOpen) return null;
 
   const handleGoogleLogin = async () => {
+    if (Date.now() < cooldownUntil) return;
     setLoading(true);
     setError('');
+    setCooldownUntil(Date.now() + 5000);
     try {
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin,
-          queryParams: { access_type: 'offline', prompt: 'consent' }
+          queryParams: { access_type: 'offline', prompt: 'select_account' }
         }
       });
       if (authError) throw authError;
@@ -86,7 +89,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                     type="button"
                     className="google-signin-btn"
                     onClick={handleGoogleLogin}
-                    disabled={loading}
+                    disabled={loading || Date.now() < cooldownUntil}
                     id="btn-google-signin"
                   >
                     {loading ? (

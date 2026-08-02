@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeJsonParse } from '../lib/storage';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
@@ -8,7 +9,7 @@ export default function TransactionsView({ user, onNavigate }) {
   useEffect(() => {
     const saved = localStorage.getItem('goisiin_transactions');
     if (saved) {
-      const list = JSON.parse(saved);
+      const list = safeJsonParse(saved, []);
       // Filter by current user email if logged in
       if (user?.email) {
         setTransactions(list.filter(t => t.userEmail === user.email));

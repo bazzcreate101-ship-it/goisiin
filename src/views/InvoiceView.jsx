@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeJsonParse } from '../lib/storage';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
@@ -11,7 +12,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
     if (invoiceData?.invoiceId) {
       const saved = localStorage.getItem('goisiin_transactions');
       if (saved) {
-        const list = JSON.parse(saved);
+        const list = safeJsonParse(saved, []);
         const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
         if (found) {
           setPaymentStatus(found.status);
@@ -32,7 +33,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
           // Update status in localStorage
           const saved = localStorage.getItem('goisiin_transactions');
           if (saved) {
-            const list = JSON.parse(saved);
+            const list = safeJsonParse(saved, []);
             const updated = list.map(t => {
               if (t.invoiceId === invoiceData?.invoiceId) {
                 return { ...t, status: 'failed' };
@@ -67,21 +68,11 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
   const handleCheckStatus = () => {
     setPaymentStatus('checking');
     setTimeout(() => {
-      const nextStatus = Math.random() < 0.8 ? 'success' : 'failed';
-      setPaymentStatus(nextStatus);
-
-      // Update status in localStorage
       const saved = localStorage.getItem('goisiin_transactions');
-      if (saved) {
-        const list = JSON.parse(saved);
-        const updated = list.map(t => {
-          if (t.invoiceId === invoiceData.invoiceId) {
-            return { ...t, status: nextStatus };
-          }
-          return t;
-        });
-        localStorage.setItem('goisiin_transactions', JSON.stringify(updated));
-      }
+      const list = safeJsonParse(saved, []);
+      const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
+      const nextStatus = found?.status || 'pending';
+      setPaymentStatus(nextStatus);
     }, 2500);
   };
 
@@ -95,7 +86,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
               <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('home', null); }} className="text-success text-decoration-none">Beranda</a>
             </li>
             <li className="breadcrumb-item">
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('order', null); }} className="text-success text-decoration-none">{invoiceData.productName}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('order', invoiceData.productId); }} className="text-success text-decoration-none">{invoiceData.productName}</a>
             </li>
             <li className="breadcrumb-item active text-secondary">Invoice</li>
           </ol>

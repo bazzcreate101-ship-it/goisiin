@@ -12,43 +12,52 @@ import AdminDashboard from './views/AdminDashboard';
 import ChatWidget from './components/ChatWidget';
 import { products as initialProducts } from './data/products';
 import { supabase } from './lib/supabaseClient';
+import {
+  findTransactionByInvoiceId,
+  normalizeStoredProducts,
+  readUserTransactions,
+  safeJsonParse,
+} from './lib/storage';
 
-// Cek apakah URL adalah halaman admin (path atau hash)
+const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
+
 const isAdminUrl = () =>
   window.location.pathname === '/bolehnihadmin' ||
   window.location.hash === '#/bolehnihadmin';
 
-// Ambil sesi admin dari sessionStorage
-const getAdminSession = () => {
-  try {
-    const saved = sessionStorage.getItem('adminAuth');
-    if (!saved) return null;
-    const parsed = JSON.parse(saved);
-    // Sesi expired setelah 8 jam
-    if (Date.now() - parsed.loggedAt > 8 * 60 * 60 * 1000) {
-      sessionStorage.removeItem('adminAuth');
-      return null;
-    }
-    return parsed;
-  } catch { return null; }
+const parseRoute = () => {
+  if (isAdminUrl()) return { view: 'admin' };
+
+  const hash = window.location.hash || '';
+  if (hash.startsWith('#/order/')) {
+    return { view: 'order', productId: decodeURIComponent(hash.replace('#/order/', '')) };
+  }
+  if (hash.startsWith('#/invoice/')) {
+    return { view: 'invoice', invoiceId: decodeURIComponent(hash.replace('#/invoice/', '')) };
+  }
+  if (hash === '#/transactions') {
+    return { view: 'transactions' };
+  }
+  return { view: 'home' };
 };
 
 function App() {
-  const [currentView, setCurrentView] = useState(() => isAdminUrl() ? 'admin' : 'home');
-  const [activeProductId, setActiveProductId] = useState(null);
-  const [invoiceData, setInvoiceData] = useState(null);
+  const [initialRoute] = useState(parseRoute);
+  const [currentView, setCurrentView] = useState(initialRoute.view);
+  const [activeProductId, setActiveProductId] = useState(initialRoute.productId || null);
+  const [invoiceData, setInvoiceData] = useState(() => (
+    initialRoute.invoiceId ? findTransactionByInvoiceId(initialRoute.invoiceId) : null
+  ));
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [user, setUser] = useState(null);
-  const [adminUser, setAdminUser] = useState(() => isAdminUrl() ? getAdminSession() : null);
+  const [adminUser, setAdminUser] = useState(null);
+  const [adminChecking, setAdminChecking] = useState(() => initialRoute.view === 'admin');
 
-  // Dynamic products state with localStorage persistence
-  const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('goisiin_products');
-    return saved ? JSON.parse(saved) : initialProducts;
-  });
+  const [products, setProducts] = useState(() => (
+    normalizeStoredProducts(localStorage.getItem('goisiin_products'), initialProducts)
+  ));
 
-  // Supabase Auth state
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -67,9 +76,7 @@ function App() {
           email: session.user.email,
           picture: session.user.user_metadata.avatar_url || null
         });
-        // Jika login berhasil dan URL masih di halaman login, arahkan ke home
         if (isAdminUrl()) return;
-        // Kalau ada hash dari Supabase OAuth redirect, bersihkan ke home
         if (window.location.hash.startsWith('#access_token=')) {
           window.location.hash = '';
         }
@@ -81,11 +88,9 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Sync users in localStorage whenever user logs in
   useEffect(() => {
     if (user?.email) {
-      const savedUsers = localStorage.getItem('goisiin_users');
-      let userList = savedUsers ? JSON.parse(savedUsers) : [];
+      const userList = safeJsonParse(localStorage.getItem('goisiin_users'), []);
       if (!userList.some(u => u.email === user.email)) {
         userList.push({
           name: user.name,
@@ -98,15 +103,71 @@ function App() {
     }
   }, [user]);
 
-  // Listen URL changes
+  const verifyAdminSession = async () => {
+    const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    if (!token) {
+      setAdminUser(null);
+      setAdminChecking(false);
+      return;
+    }
+
+    setAdminChecking(true);
+    try {
+      const response = await fetch('/api/admin-verify', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (!response.ok || !data.valid) {
+        sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+        setAdminUser(null);
+        return;
+      }
+      setAdminUser(data.admin);
+    } catch {
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      setAdminUser(null);
+    } finally {
+      setAdminChecking(false);
+    }
+  };
+
   useEffect(() => {
     const checkUrl = () => {
-      if (isAdminUrl()) {
+      const route = parseRoute();
+      if (route.view === 'admin') {
         setCurrentView('admin');
-      } else if (window.location.hash === '#/transactions') {
-        setCurrentView('transactions');
+        verifyAdminSession();
+        return;
       }
+
+      if (route.view === 'transactions') {
+        if (!user) {
+          setCurrentView('home');
+          setIsLoginOpen(true);
+          window.location.hash = '';
+          return;
+        }
+        setCurrentView('transactions');
+        return;
+      }
+
+      if (route.view === 'order') {
+        setActiveProductId(route.productId);
+        setCurrentView('order');
+        return;
+      }
+
+      if (route.view === 'invoice') {
+        setInvoiceData(findTransactionByInvoiceId(route.invoiceId));
+        setCurrentView('invoice');
+        return;
+      }
+
+      setCurrentView('home');
+      setActiveProductId(null);
+      setInvoiceData(null);
     };
+
     checkUrl();
     window.addEventListener('hashchange', checkUrl);
     window.addEventListener('popstate', checkUrl);
@@ -114,19 +175,21 @@ function App() {
       window.removeEventListener('hashchange', checkUrl);
       window.removeEventListener('popstate', checkUrl);
     };
-  }, []);
+  }, [user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
   };
 
-  const handleAdminLogin = (name) => {
-    setAdminUser({ name, loggedAt: Date.now() });
+  const handleAdminLogin = (admin, token) => {
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+    setAdminUser(admin);
+    setAdminChecking(false);
   };
 
   const handleAdminLogout = () => {
-    sessionStorage.removeItem('adminAuth');
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     setAdminUser(null);
     setCurrentView('home');
     window.location.href = '/';
@@ -144,6 +207,11 @@ function App() {
       setInvoiceData(null);
       window.location.hash = '';
     } else if (view === 'order') {
+      if (!data) {
+        setCurrentView('home');
+        window.location.hash = '';
+        return;
+      }
       setCurrentView('order');
       setActiveProductId(data);
       window.location.hash = `#/order/${data}`;
@@ -152,6 +220,10 @@ function App() {
       setInvoiceData(data);
       window.location.hash = `#/invoice/${data.invoiceId}`;
     } else if (view === 'transactions') {
+      if (!user) {
+        setIsLoginOpen(true);
+        return;
+      }
       setCurrentView('transactions');
       window.location.hash = '#/transactions';
     }
@@ -159,13 +231,19 @@ function App() {
   };
 
   const handleSelectProduct = (productId) => handleNavigate('order', productId);
-  const handleLoginSuccess = (userData) => setUser(userData);
-
-  // ── ADMIN ROUTE ──────────────────────────────────────
   if (currentView === 'admin') {
+    if (adminChecking) {
+      return (
+        <div className="main main-surface d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
+          <div className="text-success fw-bold">Memverifikasi sesi admin...</div>
+        </div>
+      );
+    }
+
     if (!adminUser) {
       return <AdminLogin onLogin={handleAdminLogin} />;
     }
+
     return (
       <AdminDashboard
         products={products}
@@ -177,7 +255,6 @@ function App() {
     );
   }
 
-  // ── MAIN APP ─────────────────────────────────────────
   return (
     <>
       <Header
@@ -203,7 +280,6 @@ function App() {
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
       />
 
       <main id="main-content">
@@ -234,7 +310,11 @@ function App() {
 
       <Footer onNavigate={handleNavigate} />
 
-      <ChatWidget products={products} />
+      <ChatWidget
+        products={products}
+        user={user}
+        transactions={readUserTransactions(user)}
+      />
     </>
   );
 }

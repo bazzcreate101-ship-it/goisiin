@@ -35,7 +35,7 @@ export default function Header({
 
   return (
     <header id="header" className="header-sticky">
-      <nav class="navbar navbar-expand-lg navbar-dark glass-nav py-2 px-0" role="navigation" aria-label="Main Navigation">
+      <nav className="navbar navbar-expand-lg navbar-dark glass-nav py-2 px-0" role="navigation" aria-label="Main Navigation">
         <div className="container col-md-8 col-12 d-flex align-items-center justify-content-between">
           
           {/* BRAND */}

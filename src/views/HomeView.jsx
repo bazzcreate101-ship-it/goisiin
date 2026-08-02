@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import Banner from '../components/Banner';
 import FlashSale from '../components/FlashSale';
 import Categories from '../components/Categories';
-import { products } from '../data/products';
 import { bannerImages } from '../assets/images';
 
-export default function HomeView({ onSelectProduct }) {
+export default function HomeView({ products, onSelectProduct }) {
   const [activeCategory, setActiveCategory] = useState('popular');
 
   const filteredProducts = activeCategory === 'popular'

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-const ADMIN_PASSWORD = 'goisiin2025';
 const ADMIN_NAMES = ['Ardan', 'Sarah', 'Ardian'];
 
 export default function AdminLogin({ onLogin }) {
@@ -9,20 +8,39 @@ export default function AdminLogin({ onLogin }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
 
-  const handleSubmit = (e) => {
+  const cooldownActive = Date.now() < cooldownUntil;
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (cooldownActive) return;
+
     setLoading(true);
     setError('');
-    setTimeout(() => {
-      if (password === ADMIN_PASSWORD) {
-        sessionStorage.setItem('adminAuth', JSON.stringify({ name, loggedAt: Date.now() }));
-        onLogin(name);
-      } else {
-        setError('Password salah. Coba lagi.');
+
+    try {
+      const response = await fetch('/api/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, password })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429 || response.status === 401) {
+          setCooldownUntil(Date.now() + 1500);
+        }
+        throw new Error(data.error || 'Login admin gagal.');
       }
+
+      onLogin(data.admin, data.token);
+      setPassword('');
+    } catch (err) {
+      setError(err.message || 'Login admin gagal.');
+    } finally {
       setLoading(false);
-    }, 700);
+    }
   };
 
   return (
@@ -45,7 +63,6 @@ export default function AdminLogin({ onLogin }) {
         backdropFilter: 'blur(20px)',
         boxShadow: '0 25px 60px rgba(0,0,0,0.5)'
       }}>
-        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{
             display: 'inline-flex',
@@ -73,7 +90,6 @@ export default function AdminLogin({ onLogin }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Pilih nama */}
           <div style={{ marginBottom: '16px' }}>
             <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', display: 'block', marginBottom: '8px', fontWeight: 500 }}>
               Login sebagai
@@ -103,7 +119,6 @@ export default function AdminLogin({ onLogin }) {
             </div>
           </div>
 
-          {/* Password */}
           <div style={{ marginBottom: '20px' }}>
             <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', display: 'block', marginBottom: '8px', fontWeight: 500 }}>
               Password
@@ -115,6 +130,7 @@ export default function AdminLogin({ onLogin }) {
                 onChange={e => { setPassword(e.target.value); setError(''); }}
                 placeholder="Masukkan password admin"
                 required
+                autoComplete="current-password"
                 style={{
                   width: '100%',
                   padding: '12px 44px 12px 14px',
@@ -148,14 +164,14 @@ export default function AdminLogin({ onLogin }) {
             </div>
             {error && (
               <p style={{ color: '#f87171', fontSize: '0.78rem', margin: '6px 0 0' }}>
-                ⚠️ {error}
+                {error}
               </p>
             )}
           </div>
 
           <button
             type="submit"
-            disabled={loading || !password}
+            disabled={loading || !password || cooldownActive}
             style={{
               width: '100%',
               padding: '13px',
@@ -165,8 +181,8 @@ export default function AdminLogin({ onLogin }) {
               color: '#0a0f0d',
               fontSize: '0.95rem',
               fontWeight: 700,
-              cursor: loading || !password ? 'not-allowed' : 'pointer',
-              opacity: !password ? 0.5 : 1,
+              cursor: loading || !password || cooldownActive ? 'not-allowed' : 'pointer',
+              opacity: !password || cooldownActive ? 0.5 : 1,
               transition: 'all 0.2s',
               display: 'flex',
               alignItems: 'center',

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { productImages } from '../assets/images';
+import { safeJsonParse } from '../lib/storage';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -10,7 +11,7 @@ const initialCategories = [
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
-export default function AdminDashboard({ products, onUpdateProducts, onNavigate, adminUser, onLogout }) {
+export default function AdminDashboard({ products, onUpdateProducts, adminUser, onLogout }) {
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'transactions' | 'users' | 'chats'
   
   // Transactions & Users state
@@ -41,8 +42,8 @@ export default function AdminDashboard({ products, onUpdateProducts, onNavigate,
     const loadData = () => {
       const savedTx = localStorage.getItem('goisiin_transactions');
       const savedUsers = localStorage.getItem('goisiin_users');
-      if (savedTx) setAdminTransactions(JSON.parse(savedTx));
-      if (savedUsers) setAdminUsers(JSON.parse(savedUsers));
+      if (savedTx) setAdminTransactions(safeJsonParse(savedTx, []));
+      if (savedUsers) setAdminUsers(safeJsonParse(savedUsers, []));
     };
     loadData();
     const timer = setInterval(loadData, 3000);
@@ -75,8 +76,8 @@ export default function AdminDashboard({ products, onUpdateProducts, onNavigate,
       const savedAdminMode = localStorage.getItem('goisiin_chat_admin_mode');
       const savedActiveAdmin = localStorage.getItem('goisiin_chat_active_admin');
 
-      if (savedMsgs) setChatMessages(JSON.parse(savedMsgs));
-      if (savedAdminMode) setAdminMode(JSON.parse(savedAdminMode));
+      if (savedMsgs) setChatMessages(safeJsonParse(savedMsgs, []));
+      if (savedAdminMode) setAdminMode(Boolean(safeJsonParse(savedAdminMode, false)));
       if (savedActiveAdmin) setActiveAdmin(savedActiveAdmin);
     };
 
@@ -420,7 +421,7 @@ export default function AdminDashboard({ products, onUpdateProducts, onNavigate,
                       </div>
 
                       <div className="denom-builder-list" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                        {formData.denominations.map((denom, index) => (
+                        {formData.denominations.map((denom) => (
                           <div key={denom.id} className="d-flex gap-2 align-items-center mb-2 p-2 border border-secondary rounded">
                             <input 
                               type="text" 

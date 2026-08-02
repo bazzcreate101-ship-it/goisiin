@@ -1,20 +1,19 @@
-﻿import React, { useState, useEffect } from 'react';
-import { products } from '../data/products';
+import React, { useState, useEffect } from 'react';
 
-export default function SearchPanel({ isOpen, onClose, onSelectProduct }) {
+export default function SearchPanel({ isOpen, products, onClose, onSelectProduct }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
 
   useEffect(() => {
     if (query.trim().length >= 3) {
-      const filtered = products.filter(p => 
+      const filtered = products.filter(p =>
         p.name.toLowerCase().includes(query.toLowerCase())
       );
       setResults(filtered);
     } else {
       setResults([]);
     }
-  }, [query]);
+  }, [query, products]);
 
   if (!isOpen) return null;
 
@@ -30,21 +29,21 @@ export default function SearchPanel({ isOpen, onClose, onSelectProduct }) {
         <div className="search-col w-100">
           <div className="search-inner">
             <span className="search-icon-lg"><i className="bi bi-search"></i></span>
-            <input 
-              id="globalSearchInput" 
-              type="search" 
+            <input
+              id="globalSearchInput"
+              type="search"
               className="form-control"
-              placeholder="Cari game, voucher, atau digital e-wallet..." 
+              placeholder="Cari game, voucher, atau digital e-wallet..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              autoComplete="off" 
+              autoComplete="off"
               aria-label="Pencarian"
             />
             {query.trim().length > 0 && (
-              <button 
-                id="clearSearchInput" 
-                type="button" 
-                className="search-clear-btn" 
+              <button
+                id="clearSearchInput"
+                type="button"
+                className="search-clear-btn"
                 onClick={() => setQuery('')}
                 style={{ right: '40px' }}
                 aria-label="Bersihkan"
@@ -52,19 +51,18 @@ export default function SearchPanel({ isOpen, onClose, onSelectProduct }) {
                 <i className="bi bi-x-lg text-secondary"></i>
               </button>
             )}
-            <button 
-              id="closeSearchPanel" 
-              type="button" 
-              className="search-clear-btn" 
+            <button
+              id="closeSearchPanel"
+              type="button"
+              className="search-clear-btn"
               onClick={onClose}
-              aria-label="Tutup" 
+              aria-label="Tutup"
               title="Tutup"
             >
               <i className="bi bi-x-lg text-white"></i>
             </button>
           </div>
 
-          {/* RESULTS */}
           {query.trim().length >= 3 && (
             <div id="globalSearchResults" className="search-results-panel d-block" role="listbox" aria-label="Hasil pencarian">
               <div className="search-section-title">Hasil Pencarian untuk "{query}"</div>
@@ -72,7 +70,7 @@ export default function SearchPanel({ isOpen, onClose, onSelectProduct }) {
                 <ul className="search-list">
                   {results.map(prod => (
                     <li key={prod.id} className="search-item">
-                      <a 
+                      <a
                         href={`#/order/game/${prod.id}`}
                         onClick={(e) => { e.preventDefault(); handleResultClick(prod.id); }}
                         className="d-flex align-items-center"
@@ -101,5 +99,3 @@ export default function SearchPanel({ isOpen, onClose, onSelectProduct }) {
     </div>
   );
 }
-
-

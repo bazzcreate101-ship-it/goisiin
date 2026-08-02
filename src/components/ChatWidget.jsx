@@ -1,34 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { paymentChannels } from '../data/products';
+import { promoInfo, siteMechanics, supportInfo } from '../data/siteInfo';
+import { safeJsonParse } from '../lib/storage';
 
-const PREMZONE_API_KEY = import.meta.env.VITE_PREMZONE_API_KEY || 'sk-up048z-c1a5e8a921c1527be96202049595bf0a';
-const PREMZONE_BASE_URL = 'https://api.premzone.co/v1/chat/completions';
+const MAX_MESSAGE_LENGTH = 600;
+const CLIENT_COOLDOWN_MS = 1800;
 
-
-export default function ChatWidget({ products }) {
+export default function ChatWidget({ products, user, transactions }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
-  const [activeAdmin, setActiveAdmin] = useState(null); // 'Ardan' | 'Sarah' | 'Ardian'
+  const [activeAdmin, setActiveAdmin] = useState(null);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
   const messagesEndRef = useRef(null);
 
-  // Load chat history from localStorage
   useEffect(() => {
     const savedMsgs = localStorage.getItem('goisiin_chat_messages');
     const savedAdminMode = localStorage.getItem('goisiin_chat_admin_mode');
     const savedActiveAdmin = localStorage.getItem('goisiin_chat_active_admin');
 
     if (savedMsgs) {
-      setMessages(JSON.parse(savedMsgs));
+      setMessages(safeJsonParse(savedMsgs, []));
     } else {
-      // Initial greeting from Vindy
       const initial = [
         {
           id: 'init-1',
           sender: 'cs',
           agent: 'Vindy',
-          text: 'Halo Kak! Selamat datang di Goisiin. Vindy siap membantu kakak untuk top up game favorit kakak dengan instan dan aman. Ada yang bisa Vindy bantu?',
+          text: 'Halo Kak! Selamat datang di Goisiin. Vindy siap bantu soal produk, harga, pembayaran, promo, transaksi, dan bantuan CS.',
           timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
         }
       ];
@@ -36,55 +37,89 @@ export default function ChatWidget({ products }) {
       localStorage.setItem('goisiin_chat_messages', JSON.stringify(initial));
     }
 
-    if (savedAdminMode) setAdminMode(JSON.parse(savedAdminMode));
+    if (savedAdminMode) setAdminMode(Boolean(safeJsonParse(savedAdminMode, false)));
     if (savedActiveAdmin) setActiveAdmin(savedActiveAdmin);
   }, []);
 
-  // Listen for admin replies from other tabs/dashboard via storage events
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'goisiin_chat_messages' && e.newValue) {
-        setMessages(JSON.parse(e.newValue));
+        setMessages(safeJsonParse(e.newValue, []));
       }
       if (e.key === 'goisiin_chat_admin_mode' && e.newValue) {
-        setAdminMode(JSON.parse(e.newValue));
+        setAdminMode(Boolean(safeJsonParse(e.newValue, false)));
       }
-      if (e.key === 'goisiin_chat_active_admin' && e.newValue) {
-        setActiveAdmin(e.newValue);
+      if (e.key === 'goisiin_chat_active_admin') {
+        setActiveAdmin(e.newValue || null);
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
   const saveState = (newMsgs, newAdminMode = adminMode, newAdmin = activeAdmin) => {
-    setMessages(newMsgs);
+    const limitedMessages = newMsgs.slice(-60);
+    setMessages(limitedMessages);
     setAdminMode(newAdminMode);
     setActiveAdmin(newAdmin);
-    localStorage.setItem('goisiin_chat_messages', JSON.stringify(newMsgs));
+    localStorage.setItem('goisiin_chat_messages', JSON.stringify(limitedMessages));
     localStorage.setItem('goisiin_chat_admin_mode', JSON.stringify(newAdminMode));
     if (newAdmin) {
       localStorage.setItem('goisiin_chat_active_admin', newAdmin);
     } else {
       localStorage.removeItem('goisiin_chat_active_admin');
     }
-    // Dispatch local storage event for current tab synchronization
-    window.dispatchEvent(new Event('storage'));
+  };
+
+  const buildChatContext = () => ({
+    user: user ? { name: user.name, email: user.email } : null,
+    products: products.map((product) => ({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      popular: product.popular,
+      discount: product.discount,
+      inputLabel: product.inputLabel,
+      denominations: product.denominations,
+    })),
+    paymentChannels: paymentChannels.map((channel) => ({
+      id: channel.id,
+      category: channel.category,
+      name: channel.name,
+      feePercent: channel.feePercent,
+      feeFlat: channel.feeFlat,
+    })),
+    transactions,
+    promos: promoInfo,
+    mechanics: siteMechanics,
+    support: supportInfo,
+  });
+
+  const handoffToAdmin = (baseMessages, text = 'Chat dialihkan ke Admin CS Goisiin. Kakak sedang terhubung dengan antrean admin.') => {
+    const sysMsg = {
+      id: `sys-${Date.now()}`,
+      sender: 'system',
+      text,
+      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    };
+    saveState([...baseMessages, sysMsg], true, null);
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    const messageText = inputText.trim().slice(0, MAX_MESSAGE_LENGTH);
+    if (!messageText || isTyping || Date.now() < cooldownUntil) return;
+
+    setCooldownUntil(Date.now() + CLIENT_COOLDOWN_MS);
 
     const userMsg = {
       id: `msg-${Date.now()}`,
       sender: 'user',
-      text: inputText,
+      text: messageText,
       timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -92,130 +127,75 @@ export default function ChatWidget({ products }) {
     saveState(updatedMsgs);
     setInputText('');
 
-    // Check if user specifically requests admin or humana
-    const textLower = inputText.toLowerCase();
-    const needsAdmin = textLower.includes('admin') || 
-                        textLower.includes('manusia') || 
-                        textLower.includes('cs asli') || 
-                        textLower.includes('whatsapp') ||
-                        textLower.includes('bantuan');
+    const textLower = messageText.toLowerCase();
+    const needsAdmin = textLower.includes('admin') ||
+      textLower.includes('manusia') ||
+      textLower.includes('cs asli') ||
+      textLower.includes('whatsapp') ||
+      textLower.includes('refund') ||
+      textLower.includes('komplain');
 
     if (adminMode || needsAdmin) {
       if (needsAdmin && !adminMode) {
-        // Transition to admin mode
         setIsTyping(true);
         setTimeout(() => {
           setIsTyping(false);
-          const systemMsg = {
-            id: `sys-${Date.now()}`,
-            sender: 'system',
-            text: 'Menghubungkan ke Tim CS Goisiin... Silakan tunggu.',
-            timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-          };
-          const nextMsgs = [...updatedMsgs, systemMsg];
-          saveState(nextMsgs, true, null);
-        }, 1500);
+          handoffToAdmin(updatedMsgs, 'Menghubungkan ke Tim CS Goisiin. Silakan tunggu.');
+        }, 900);
       }
       return;
     }
 
-    // AI Chatbot logic using Premzone API
     setIsTyping(true);
 
-    // Simulate natural typing delay (between 2 to 4 seconds)
-    const delay = Math.floor(Math.random() * 2000) + 2000;
-    setTimeout(async () => {
-      try {
-        const productInfoStr = products.map(p => {
-          const denoms = p.denominations.map(d => `${d.name} (${d.price} IDR)`).join(', ');
-          return `- ${p.name}: ${denoms}`;
-        }).join('\n');
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: messageText,
+          history: updatedMsgs.slice(-8),
+          context: buildChatContext(),
+        }),
+      });
+      const data = await response.json();
 
-        const systemPrompt = `Kamu adalah Vindy, customer service AI dari Goisiin.com, sebuah platform top up game dan voucher game termurah, terpercaya, dan tercepat di Indonesia.
-Gaya bicaramu harus sangat ramah, asyik, membantu, natural, semi-formal khas anak muda Indonesia, dan seolah-olah kamu adalah manusia asli. Gunakan panggilan "Kakak" atau "Kak" untuk menyapa pelanggan.
-
-Informasi produk dan harga terbaru di Goisiin:
-${productInfoStr}
-
-Aturan penting:
-1. Jawab pertanyaan seputar game yang didukung, cara top up, metode pembayaran (QRIS, DANA, GoPay, OVO, ShopeePay, LinkAja, VA BCA, Mandiri, BRI, BNI, BSI, CIMB Niaga, Permata Bank, Alfamart, Indomaret).
-2. Jika pelanggan bertanya hal di luar Goisiin, meminta refund, komplain transaksi gagal/belum masuk setelah beberapa jam, atau meminta berbicara dengan manusia/admin/CS asli, jawab dengan sangat sopan bahwa kamu akan mengalihkan obrolan ini ke admin/tim CS Goisiin (Ardan/Sarah/Ardian). Lalu tambahkan teks '[FORWARD_TO_ADMIN]' di baris terakhir jawabanmu.
-3. Batasi respon maksimal 2-3 kalimat pendek agar terlihat seperti sedang mengetik di aplikasi chat biasa. Jangan memberikan penjelasan yang terlalu panjang lebar sekaligus.`;
-
-        // Format history
-        const apiHistory = updatedMsgs.slice(-8).map(m => {
-          if (m.sender === 'user') return { role: 'user', content: m.text };
-          if (m.sender === 'cs') return { role: 'assistant', content: m.text };
-          return { role: 'system', content: m.text };
-        });
-
-        const response = await fetch(PREMZONE_BASE_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${PREMZONE_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: 'cx/gpt-5.4-mini',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              ...apiHistory
-            ],
-            temperature: 0.7
-          })
-        });
-
-        if (!response.ok) throw new Error('API Error');
-        const data = await response.json();
-        let reply = data.choices[0].message.content || '';
-
-        setIsTyping(false);
-
-        let shouldRouteToAdmin = reply.includes('[FORWARD_TO_ADMIN]');
-        reply = reply.replace('[FORWARD_TO_ADMIN]', '').trim();
-
-        const csMsg = {
-          id: `msg-${Date.now()}`,
-          sender: 'cs',
-          agent: 'Vindy',
-          text: reply || 'Ada yang bisa Vindy bantu lagi, Kak?',
-          timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-        };
-
-        let nextMsgs = [...updatedMsgs, csMsg];
-
-        if (shouldRouteToAdmin) {
-          const sysMsg = {
-            id: `sys-${Date.now()}`,
-            sender: 'system',
-            text: 'Chat dialihkan ke Admin CS Goisiin. Kakak sedang terhubung dengan antrean admin.',
-            timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-          };
-          nextMsgs.push(sysMsg);
-          saveState(nextMsgs, true, null);
-        } else {
-          saveState(nextMsgs);
-        }
-
-      } catch (err) {
-        setIsTyping(false);
-        const errorMsg = {
-          id: `msg-${Date.now()}`,
-          sender: 'cs',
-          agent: 'Vindy',
-          text: 'Maaf Kak, jaringan Vindy sedang sedikit terganggu. Ada yang bisa Vindy bantu terkait produk game?',
-          timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-        };
-        saveState([...updatedMsgs, errorMsg]);
+      if (!response.ok) {
+        throw new Error(data.error || 'Chat sedang dibatasi.');
       }
-    }, delay);
+
+      const csMsg = {
+        id: `msg-${Date.now()}`,
+        sender: 'cs',
+        agent: 'Vindy',
+        text: data.reply || 'Ada yang bisa Vindy bantu lagi seputar Goisiin, Kak?',
+        timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      };
+      const nextMsgs = [...updatedMsgs, csMsg];
+
+      if (data.forwardToAdmin) {
+        handoffToAdmin(nextMsgs);
+      } else {
+        saveState(nextMsgs);
+      }
+    } catch (err) {
+      const errorMsg = {
+        id: `msg-${Date.now()}`,
+        sender: 'cs',
+        agent: 'Vindy',
+        text: err.message || 'Maaf Kak, jaringan Vindy sedang terganggu. Coba lagi sebentar atau hubungi admin Goisiin.',
+        timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      };
+      saveState([...updatedMsgs, errorMsg]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
     <div className="goisiin-chat-widget">
-      {/* Floating Chat Button */}
-      <button 
-        className="chat-float-btn" 
+      <button
+        className="chat-float-btn"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Hubungi Customer Service"
       >
@@ -227,20 +207,18 @@ Aturan penting:
         )}
       </button>
 
-      {/* Chat Drawer Window */}
       {isOpen && (
         <div className="chat-window">
-          {/* Header */}
           <div className="chat-header">
             <div className="d-flex align-items-center gap-2">
               <div className="chat-avatar-wrapper">
-                <div className="chat-avatar-icon">👩‍💻</div>
+                <div className="chat-avatar-icon">CS</div>
                 <span className="chat-status-dot"></span>
               </div>
               <div className="chat-header-text">
                 <div className="chat-agent-name">
-                  {adminMode 
-                    ? (activeAdmin ? `Admin ${activeAdmin}` : 'Menghubungkan ke Admin...') 
+                  {adminMode
+                    ? (activeAdmin ? `Admin ${activeAdmin}` : 'Menghubungkan ke Admin...')
                     : 'Vindy - CS Goisiin'}
                 </div>
                 <div className="chat-agent-sub">
@@ -250,7 +228,6 @@ Aturan penting:
             </div>
           </div>
 
-          {/* Messages list */}
           <div className="chat-messages-container">
             {messages.map((m) => {
               if (m.sender === 'system') {
@@ -292,16 +269,20 @@ Aturan penting:
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Form */}
           <form className="chat-input-form" onSubmit={handleSendMessage}>
             <input
               type="text"
-              placeholder="Tulis pesan kakak di sini..."
+              maxLength={MAX_MESSAGE_LENGTH}
+              placeholder="Tulis pesan seputar Goisiin..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="chat-input-field"
             />
-            <button type="submit" className="chat-send-btn" disabled={!inputText.trim()}>
+            <button
+              type="submit"
+              className="chat-send-btn"
+              disabled={!inputText.trim() || isTyping || Date.now() < cooldownUntil}
+            >
               <i className="bi bi-send-fill text-white"></i>
             </button>
           </form>
@@ -310,4 +291,3 @@ Aturan penting:
     </div>
   );
 }
-
