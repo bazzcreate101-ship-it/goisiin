@@ -5,7 +5,7 @@ import Categories from '../components/Categories';
 import { bannerImages } from '../assets/images';
 import { STAMP_MIN_TRANSACTION, stampPosterImage } from '../data/stampRewards';
 
-export default function HomeView({ products, onSelectProduct }) {
+export default function HomeView({ products, onSelectProduct, onNavigate }) {
   const [activeCategory, setActiveCategory] = useState('popular');
   const [showStampPopup, setShowStampPopup] = useState(true);
 
@@ -16,6 +16,12 @@ export default function HomeView({ products, onSelectProduct }) {
   const handleProductClick = (prodId, e) => {
     e.preventDefault();
     onSelectProduct(prodId);
+  };
+
+  const handleStampClick = (event) => {
+    event.preventDefault();
+    setShowStampPopup(false);
+    onNavigate('stamp');
   };
 
   return (
@@ -97,9 +103,9 @@ export default function HomeView({ products, onSelectProduct }) {
             <h2>Kumpulkan 6 stamp unik, rebut hadiah utama.</h2>
             <p>
               Dapatkan 1 stamp acak setiap transaksi sukses minimal Rp{STAMP_MIN_TRANSACTION.toLocaleString('id-ID')}.
-              Duplicate bisa dikirim atau dibarter dengan user lain.
+              Duplicate bisa dibagikan ke user lain lewat kode redeem.
             </p>
-            <a href="#/stamp" className="btn btn-success fw-bold">Mulai Kumpulkan Stamp</a>
+            <a href="#/stamp" onClick={handleStampClick} className="btn btn-success fw-bold">Mulai Kumpulkan Stamp</a>
           </div>
           <div className="stamp-home-card__image">
             <img src={stampPosterImage} alt="Promo Stamp Berhadiah" />
@@ -255,7 +261,7 @@ export default function HomeView({ products, onSelectProduct }) {
               <h2 id="stampPopupTitle">Kumpulkan 6 stamp unik.</h2>
               <p>Belanja minimal Rp{STAMP_MIN_TRANSACTION.toLocaleString('id-ID')} untuk dapat 1 stamp acak. Lengkapi semua stamp dan tukarkan hadiah.</p>
               <div className="stamp-popup-actions">
-                <a href="#/stamp" className="btn btn-success fw-bold" onClick={() => setShowStampPopup(false)}>Lihat Promo</a>
+              <a href="#/stamp" className="btn btn-success fw-bold" onClick={handleStampClick}>Lihat Promo</a>
                 <button type="button" className="btn btn-outline-success fw-bold" onClick={() => setShowStampPopup(false)}>Nanti dulu</button>
               </div>
             </div>

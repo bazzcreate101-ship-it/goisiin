@@ -6,9 +6,9 @@ import {
   assignPrizeToRedemption,
   awardStampForTransaction,
   getStampAuditLogs,
+  getStampRedeemCodes,
   getStampRedemptions,
   getStampSummary,
-  getStampTrades,
   grantStampToUser,
   revokeStampFromUser,
   updateRedemptionStatus,
@@ -32,6 +32,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const [adminUsers, setAdminUsers] = useState([]);
   const [stampRefreshKey, setStampRefreshKey] = useState(0);
   const [stampForm, setStampForm] = useState({ email: '', stampNo: 1 });
+  const [stampAdminNotice, setStampAdminNotice] = useState('');
 
   // Product state
   const [editingProduct, setEditingProduct] = useState(null);
@@ -267,7 +268,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
 
   const reloadStampAdmin = () => setStampRefreshKey((key) => key + 1);
   const stampRedemptions = stampRefreshKey >= 0 ? getStampRedemptions() : [];
-  const stampTrades = stampRefreshKey >= 0 ? getStampTrades() : [];
+  const stampCodes = stampRefreshKey >= 0 ? getStampRedeemCodes() : [];
   const stampAuditLogs = stampRefreshKey >= 0 ? getStampAuditLogs() : [];
   const adminActor = adminUser?.email || adminUser?.name || 'admin';
 
@@ -275,18 +276,21 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     e.preventDefault();
     const result = grantStampToUser(stampForm.email, stampForm.stampNo, adminActor);
     if (!result.ok) {
-      alert('Gagal memberi stamp. Cek email dan nomor stamp.');
+      setStampAdminNotice('Gagal memberi stamp. Cek email dan nomor stamp.');
       return;
     }
+    setStampAdminNotice(`Stamp ${stampForm.stampNo} berhasil diberikan ke ${stampForm.email}.`);
+    setStampForm({ email: '', stampNo: 1 });
     reloadStampAdmin();
   };
 
   const handleAdminRevokeStamp = (email, stampNo) => {
     const result = revokeStampFromUser(email, stampNo, adminActor);
     if (!result.ok) {
-      alert('Stamp tidak tersedia untuk dicabut.');
+      setStampAdminNotice('Stamp tidak tersedia untuk dicabut.');
       return;
     }
+    setStampAdminNotice(`Stamp ${stampNo} berhasil dicabut dari ${email}.`);
     reloadStampAdmin();
   };
 
@@ -800,6 +804,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                   </select>
                   <button className="btn btn-success fw-bold" type="submit">Tambah Stamp</button>
                 </form>
+                {stampAdminNotice && (
+                  <div className={`alert ${stampAdminNotice.toLowerCase().includes('gagal') || stampAdminNotice.toLowerCase().includes('tidak') ? 'alert-warning' : 'alert-success'} py-2 mt-3 mb-0`}>
+                    {stampAdminNotice}
+                  </div>
+                )}
                 <datalist id="admin-stamp-users">
                   {adminUsers.map((u) => <option value={u.email} key={u.email}>{u.name}</option>)}
                 </datalist>
@@ -938,14 +947,18 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
 
             <div className="col-lg-6 col-12">
               <div className="order-card p-3 h-100">
-                <h5 className="text-success fw-bold mb-3">Trade / Gift Log</h5>
+                <h5 className="text-success fw-bold mb-3">Kode Redeem Stamp</h5>
                 <div className="stamp-admin-log">
-                  {stampTrades.length === 0 ? (
-                    <p className="text-secondary">Belum ada barter.</p>
-                  ) : stampTrades.map((trade) => (
-                    <div className="stamp-admin-log__item" key={trade.id}>
-                      <strong>{trade.status}</strong>
-                      <span>{trade.fromEmail} menawarkan S{trade.offeredStamp} ke {trade.toEmail}, minta S{trade.requestedStamp}</span>
+                  {stampCodes.length === 0 ? (
+                    <p className="text-secondary">Belum ada kode redeem.</p>
+                  ) : stampCodes.slice(0, 30).map((code) => (
+                    <div className="stamp-admin-log__item" key={code.id}>
+                      <strong>{code.status} · S{code.stampNo}</strong>
+                      <span>
+                        {code.code}<br />
+                        Owner: {code.ownerEmail}<br />
+                        {code.redeemedBy ? `Redeemed: ${code.redeemedBy}` : `Dibuat: ${code.createdAt}`}
+                      </span>
                     </div>
                   ))}
                 </div>

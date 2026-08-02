@@ -5,11 +5,14 @@ import stamp4 from '../assets/stamp/stamp_4.webp';
 import stamp5 from '../assets/stamp/stamp_5.webp';
 import stamp6 from '../assets/stamp/stamp_6.webp';
 import stampPoster from '../assets/stamp/stamp_poster.webp';
-import merchModel from '../assets/reward/merch_model.webp';
 import merchBaju from '../assets/reward/merch_baju.webp';
 import merchJaket from '../assets/reward/merch_jaket.webp';
 import merchHelm from '../assets/reward/merch_helm.webp';
 import merchTumbler from '../assets/reward/merch_tumbler.webp';
+import rewardSamsung from '../assets/reward/reward_samsung.webp';
+import rewardBike from '../assets/reward/reward_bike.webp';
+import rewardGooglePlay from '../assets/reward/reward_google_play.webp';
+import rewardEwallet from '../assets/reward/reward_ewallet.webp';
 
 export const STAMP_REQUIRED_UNIQUE = 6;
 export const STAMP_MIN_TRANSACTION = 100000;
@@ -32,7 +35,7 @@ export const stampRewards = [
     type: 'physical',
     tier: 'Hadiah Utama',
     stock: 1,
-    image: merchModel,
+    image: rewardSamsung,
     description: 'Hadiah utama promo stamp Goisiin.',
   },
   {
@@ -41,7 +44,7 @@ export const stampRewards = [
     type: 'physical',
     tier: 'Hadiah Utama',
     stock: 1,
-    image: merchModel,
+    image: rewardBike,
     description: 'Hadiah utama untuk pengguna beruntung.',
   },
   {
@@ -86,7 +89,7 @@ export const stampRewards = [
     type: 'voucher_code',
     tier: 'Digital',
     stock: 20,
-    image: merchModel,
+    image: rewardGooglePlay,
     description: 'Kode voucher Google Play langsung tampil setelah hadiah ditentukan.',
   },
   {
@@ -95,7 +98,7 @@ export const stampRewards = [
     type: 'wallet_balance',
     tier: 'Digital',
     stock: 10,
-    image: merchTumbler,
+    image: rewardEwallet,
     description: 'Saldo dikirim ke nomor e-wallet yang diklaim.',
   },
   {
@@ -104,7 +107,7 @@ export const stampRewards = [
     type: 'wallet_balance',
     tier: 'Digital',
     stock: 10,
-    image: merchTumbler,
+    image: rewardEwallet,
     description: 'Saldo dikirim ke nomor e-wallet yang diklaim.',
   },
 ];

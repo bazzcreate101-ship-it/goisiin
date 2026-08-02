@@ -102,7 +102,7 @@ export default function ChatWidget({ products, user, transactions }) {
       requiredUniqueStamp: stampTypes.length,
       rules: [
         'User mendapat 1 stamp acak dari stamp 1 sampai 6 setiap transaksi sukses minimal Rp100.000.',
-        'Stamp duplicate bisa dikirim sebagai gift atau dibarter dengan user lain.',
+        'Stamp duplicate bisa dibagikan ke user lain dengan klik stamp lalu membuat kode redeem. Kode hanya bisa dipakai 1 kali.',
         'Hadiah bisa ditukar setelah user punya stamp 1, 2, 3, 4, 5, dan 6.',
         'Hasil spin hadiah ditentukan admin sebelum reveal dan user mengisi form klaim sesuai tipe hadiah.',
       ],

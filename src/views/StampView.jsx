@@ -7,19 +7,17 @@ import {
   stampTypes,
 } from '../data/stampRewards';
 import {
-  acceptTradeOffer,
+  cancelStampRedeemCode,
   createRedemption,
-  createTradeOffer,
+  createStampRedeemCode,
   getStampEvents,
+  getStampRedeemCodes,
   getStampSummary,
-  getStampTrades,
   getUserRedemptions,
-  giftStamp,
   normalizeEmail,
-  rejectTradeOffer,
+  redeemStampCode,
   submitRedemptionClaim,
 } from '../lib/stampService';
-import { readStorageList } from '../lib/storage';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -42,18 +40,16 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
   const userEmail = normalizeEmail(user?.email);
   const [, setRefreshKey] = useState(0);
   const [message, setMessage] = useState('');
-  const [giftForm, setGiftForm] = useState({ stampNo: 1, toEmail: '' });
-  const [tradeForm, setTradeForm] = useState({ offeredStamp: 1, requestedStamp: 2, toEmail: '' });
   const [claimDetails, setClaimDetails] = useState(initialClaim);
   const [spinState, setSpinState] = useState({ spinning: false, prizeId: null, redemptionId: null });
+  const [redeemInput, setRedeemInput] = useState('');
 
   const stampState = userEmail ? getStampSummary(userEmail) : null;
   const events = userEmail ? getStampEvents().filter((event) => normalizeEmail(event.userEmail) === userEmail).slice(0, 12) : [];
-  const trades = userEmail
-    ? getStampTrades().filter((trade) => [normalizeEmail(trade.fromEmail), normalizeEmail(trade.toEmail)].includes(userEmail)).slice(0, 20)
-    : [];
   const redemptions = userEmail ? getUserRedemptions(userEmail) : [];
-  const knownUsers = readStorageList('goisiin_users').filter((item) => normalizeEmail(item.email) !== userEmail);
+  const stampCodes = userEmail
+    ? getStampRedeemCodes().filter((code) => [normalizeEmail(code.ownerEmail), normalizeEmail(code.redeemedBy)].includes(userEmail)).slice(0, 20)
+    : [];
 
   const reload = (nextMessage = '') => {
     setMessage(nextMessage);
@@ -69,7 +65,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
               <span className="stamp-eyebrow">Promo Stamp Berhadiah</span>
               <h1>Kumpulkan 6 stamp unik dan tukarkan hadiah Goisiin.</h1>
               <p>
-                Login dulu untuk melihat progress stamp, barter dengan user lain, dan klaim hadiah.
+                Login dulu untuk melihat progress stamp, membuat kode redeem, dan klaim hadiah.
               </p>
               <button className="btn btn-success fw-bold" onClick={onLoginOpen}>
                 Login untuk mulai
@@ -84,29 +80,40 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
 
   const pendingPrize = redemptions.find((item) => item.status === 'pending_prize');
 
-  const handleGift = (event) => {
-    event.preventDefault();
-    const result = giftStamp(userEmail, giftForm.toEmail, giftForm.stampNo);
-    if (!result.ok) {
-      reload('Gift gagal. Pastikan stamp tersedia dan email tujuan benar.');
+  const handleCreateStampCode = (stampNo) => {
+    const available = stampState.available[stampNo] || 0;
+    if (available <= 0) {
+      reload('Stamp ini belum tersedia untuk dibuat kode redeem.');
       return;
     }
-    setGiftForm({ stampNo: 1, toEmail: '' });
-    reload('Stamp berhasil dikirim.');
+    const result = createStampRedeemCode(userEmail, stampNo);
+    reload(result.ok
+      ? `Kode redeem ${result.code.code} berhasil dibuat. Bagikan kode ini ke user lain.`
+      : 'Gagal membuat kode redeem. Cek stok stamp tersedia.');
   };
 
-  const handleCreateTrade = (event) => {
+  const handleRedeemCode = (event) => {
     event.preventDefault();
-    const result = createTradeOffer(userEmail, tradeForm.toEmail, tradeForm.offeredStamp, tradeForm.requestedStamp);
+    const result = redeemStampCode(redeemInput, userEmail);
     if (!result.ok) {
-      reload('Barter gagal dibuat. Cek stamp tersedia dan email tujuan.');
+      const copy = {
+        invalid_code: 'Kode redeem tidak valid atau sudah dipakai.',
+        self_redeem_blocked: 'Kode buatan akun sendiri tidak bisa diredeem sendiri.',
+        expired: 'Kode redeem sudah kedaluwarsa.',
+      };
+      reload(copy[result.reason] || 'Kode redeem gagal diproses.');
       return;
     }
-    setTradeForm({ offeredStamp: 1, requestedStamp: 2, toEmail: '' });
-    reload('Penawaran barter berhasil dibuat.');
+    setRedeemInput('');
+    reload(`Berhasil redeem Stamp ${result.code.stampNo}.`);
   };
 
-  const handleRedeem = () => {
+  const handleCancelCode = (codeId) => {
+    const result = cancelStampRedeemCode(codeId, userEmail);
+    reload(result.ok ? 'Kode redeem dibatalkan dan stamp dikembalikan.' : 'Kode redeem tidak bisa dibatalkan.');
+  };
+
+  const handleRedeemSet = () => {
     const result = createRedemption(userEmail);
     if (!result.ok) {
       reload('Stamp belum lengkap atau belum bisa ditukar.');
@@ -152,7 +159,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
             <h1>Kumpulkan 6 stamp unik.</h1>
             <p>
               Dapatkan 1 stamp acak setiap transaksi sukses minimal {formatRupiah(STAMP_MIN_TRANSACTION)}.
-              Duplicate bisa dikirim atau dibarter dengan user lain.
+              Stamp duplicate bisa dibagikan dengan mengubahnya menjadi kode redeem.
             </p>
             <div className="stamp-hero__stats">
               <div>
@@ -164,8 +171,8 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                 <span>Duplicate</span>
               </div>
               <div>
-                <strong>{trades.filter((trade) => trade.status === 'pending').length}</strong>
-                <span>Barter aktif</span>
+                <strong>{stampCodes.filter((code) => code.status === 'active' && normalizeEmail(code.ownerEmail) === userEmail).length}</strong>
+                <span>Kode aktif</span>
               </div>
             </div>
           </div>
@@ -175,7 +182,9 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
         </section>
 
         {message && (
-          <div className="alert alert-success py-2 mt-3 mb-0">{message}</div>
+          <div className={`alert ${message.toLowerCase().includes('gagal') || message.toLowerCase().includes('tidak') ? 'alert-warning' : 'alert-success'} py-2 mt-3 mb-0`}>
+            {message}
+          </div>
         )}
 
         <section className="stamp-board order-card mt-3">
@@ -189,86 +198,93 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                   : `Kurang stamp ${stampState.missing.join(', ') || '-'} untuk lengkap.`}
               </p>
             </div>
-            <button className="btn btn-success fw-bold" disabled={!stampState.complete || !!pendingPrize} onClick={handleRedeem}>
+            <button className="btn btn-success fw-bold" disabled={!stampState.complete || !!pendingPrize} onClick={handleRedeemSet}>
               {pendingPrize ? 'Menunggu Hadiah' : 'Tukar 6 Stamp'}
             </button>
           </div>
           <div className="stamp-grid">
             {stampTypes.map((stamp) => {
               const count = stampState.counts[stamp.id] || 0;
-              const locked = stampState.locks[stamp.id] || 0;
+              const available = stampState.available[stamp.id] || 0;
               return (
-                <div className={`stamp-slot ${count > 0 ? 'stamp-slot--owned' : 'stamp-slot--empty'}`} key={stamp.id}>
+                <button
+                  type="button"
+                  className={`stamp-slot stamp-slot--button ${count > 0 ? 'stamp-slot--owned' : 'stamp-slot--empty'}`}
+                  key={stamp.id}
+                  onClick={() => handleCreateStampCode(stamp.id)}
+                  disabled={available <= 0}
+                  title={available > 0 ? `Buat kode redeem ${stamp.name}` : `${stamp.name} belum tersedia`}
+                >
                   <img src={stamp.image} alt={stamp.name} />
                   <div className="stamp-slot__meta">
                     <span>{stamp.name}</span>
                     <strong>{count} pcs</strong>
                   </div>
-                  {locked > 0 && <small className="stamp-slot__lock">{locked} dikunci barter</small>}
-                </div>
+                  {available > 0 && <small className="stamp-slot__lock">Klik buat kode</small>}
+                </button>
               );
             })}
           </div>
         </section>
 
-        <div className="row g-3 mt-1">
-          <div className="col-lg-6 col-12">
-            <section className="order-card h-100">
-              <span className="stamp-eyebrow">Gift Stamp</span>
-              <h2 className="stamp-section-title">Kirim stamp ke user lain</h2>
-              <form className="stamp-form" onSubmit={handleGift}>
-                <select value={giftForm.stampNo} onChange={(event) => setGiftForm({ ...giftForm, stampNo: Number(event.target.value) })}>
-                  {stampTypes.map((stamp) => (
-                    <option value={stamp.id} key={stamp.id}>{stamp.name} tersedia {stampState.available[stamp.id] || 0}</option>
-                  ))}
-                </select>
-                <input
-                  type="email"
-                  value={giftForm.toEmail}
-                  onChange={(event) => setGiftForm({ ...giftForm, toEmail: event.target.value })}
-                  placeholder="Email user tujuan"
-                  list="goisiin-known-users"
-                  required
-                />
-                <button className="btn btn-outline-success fw-bold" type="submit">Kirim Stamp</button>
-              </form>
-            </section>
-          </div>
+        <section className="stamp-share-panel mt-3">
+          <article className="order-card h-100">
+            <span className="stamp-eyebrow">Bagikan Stamp</span>
+            <h2 className="stamp-section-title">Mekanisme kode redeem</h2>
+            <p className="text-secondary mb-2">
+              Klik stamp yang kamu punya untuk membuat kode redeem. Stamp akan keluar dari akun kamu
+              saat kode dibuat, lalu masuk ke akun user yang menukarkan kode tersebut.
+            </p>
+            <ul className="stamp-info-list">
+              <li>Kode hanya bisa dipakai 1 kali.</li>
+              <li>Kode aktif atau kedaluwarsa bisa dibatalkan kalau belum diredeem.</li>
+              <li>Kode buatan akun sendiri tidak bisa diredeem sendiri.</li>
+            </ul>
+          </article>
 
-          <div className="col-lg-6 col-12">
-            <section className="order-card h-100">
-              <span className="stamp-eyebrow">Barter Stamp</span>
-              <h2 className="stamp-section-title">Tukar duplicate dengan user lain</h2>
-              <form className="stamp-form" onSubmit={handleCreateTrade}>
-                <input
-                  type="email"
-                  value={tradeForm.toEmail}
-                  onChange={(event) => setTradeForm({ ...tradeForm, toEmail: event.target.value })}
-                  placeholder="Email user tujuan"
-                  list="goisiin-known-users"
-                  required
-                />
-                <div className="stamp-form__inline">
-                  <select value={tradeForm.offeredStamp} onChange={(event) => setTradeForm({ ...tradeForm, offeredStamp: Number(event.target.value) })}>
-                    {stampTypes.map((stamp) => (
-                      <option value={stamp.id} key={stamp.id}>Kasih {stamp.name}</option>
-                    ))}
-                  </select>
-                  <select value={tradeForm.requestedStamp} onChange={(event) => setTradeForm({ ...tradeForm, requestedStamp: Number(event.target.value) })}>
-                    {stampTypes.map((stamp) => (
-                      <option value={stamp.id} key={stamp.id}>Minta {stamp.name}</option>
-                    ))}
-                  </select>
+          <article className="order-card h-100">
+            <span className="stamp-eyebrow">Redeem Kode</span>
+            <h2 className="stamp-section-title">Masukkan kode stamp</h2>
+            <form className="stamp-form" onSubmit={handleRedeemCode}>
+              <input
+                value={redeemInput}
+                onChange={(event) => setRedeemInput(event.target.value.toUpperCase())}
+                placeholder="Contoh: GSI-S1-ABCDE-23456"
+                required
+              />
+              <button className="btn btn-success fw-bold" type="submit">Redeem Stamp</button>
+            </form>
+          </article>
+        </section>
+
+        <section className="order-card mt-3">
+          <span className="stamp-eyebrow">Kode Stamp</span>
+          <h2 className="stamp-section-title">Kode redeem saya</h2>
+          <div className="stamp-code-list">
+            {stampCodes.length === 0 ? (
+              <p className="text-secondary mb-0">Belum ada kode redeem.</p>
+            ) : stampCodes.map((code) => (
+              <div className="stamp-code-item" key={code.id}>
+                <div>
+                  <strong>{code.code}</strong>
+                  <p>
+                    Stamp {code.stampNo} · {normalizeEmail(code.ownerEmail) === userEmail ? 'Dibuat oleh kamu' : `Diterima dari ${code.ownerEmail}`}
+                    <br />
+                    <span>{code.status === 'redeemed' ? `Dipakai oleh ${code.redeemedBy}` : `Dibuat ${code.createdAt}`}</span>
+                  </p>
                 </div>
-                <button className="btn btn-outline-success fw-bold" type="submit">Buat Barter</button>
-              </form>
-            </section>
+                <div className="stamp-list__actions">
+                  <span className={`stamp-status stamp-status--${code.status}`}>{code.status}</span>
+                  {['active', 'expired'].includes(code.status) && normalizeEmail(code.ownerEmail) === userEmail && (
+                    <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => handleCancelCode(code.id)}>
+                      Batalkan
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-
-        <datalist id="goisiin-known-users">
-          {knownUsers.map((item) => <option value={item.email} key={item.email}>{item.name}</option>)}
-        </datalist>
+        </section>
 
         <section className="order-card mt-3">
           <span className="stamp-eyebrow">Hadiah</span>
@@ -291,41 +307,6 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
         <div className="row g-3 mt-1">
           <div className="col-lg-6 col-12">
             <section className="order-card h-100">
-              <span className="stamp-eyebrow">Barter Aktif</span>
-              <h2 className="stamp-section-title">Offer masuk & keluar</h2>
-              <div className="stamp-list">
-                {trades.length === 0 ? (
-                  <p className="text-secondary mb-0">Belum ada barter.</p>
-                ) : trades.map((trade) => (
-                  <div className="stamp-list__item" key={trade.id}>
-                    <div>
-                      <strong>{trade.fromEmail === userEmail ? 'Kamu menawarkan' : 'Offer masuk'}</strong>
-                      <p>
-                        Stamp {trade.offeredStamp} ↔ Stamp {trade.requestedStamp}<br />
-                        <span>{trade.fromEmail} ke {trade.toEmail}</span>
-                      </p>
-                    </div>
-                    <div className="stamp-list__actions">
-                      <span className={`stamp-status stamp-status--${trade.status}`}>{trade.status}</span>
-                      {trade.status === 'pending' && trade.toEmail === userEmail && (
-                        <button className="btn btn-success btn-sm" onClick={() => { const result = acceptTradeOffer(trade.id, userEmail); reload(result.ok ? 'Barter diterima.' : 'Barter gagal. Stamp tidak tersedia.'); }}>
-                          Terima
-                        </button>
-                      )}
-                      {trade.status === 'pending' && (
-                        <button className="btn btn-outline-danger btn-sm" onClick={() => { rejectTradeOffer(trade.id, userEmail); reload('Barter ditutup.'); }}>
-                          {trade.fromEmail === userEmail ? 'Batal' : 'Tolak'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <div className="col-lg-6 col-12">
-            <section className="order-card h-100">
               <span className="stamp-eyebrow">Riwayat</span>
               <h2 className="stamp-section-title">Aktivitas stamp</h2>
               <div className="stamp-list">
@@ -343,21 +324,21 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
               </div>
             </section>
           </div>
-        </div>
 
-        <section className="order-card mt-3">
-          <div className="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-            <div>
+          <div className="col-lg-6 col-12">
+            <section className="order-card h-100">
               <span className="stamp-eyebrow">Penukaran</span>
               <h2 className="stamp-section-title">Reveal hadiah</h2>
               <p className="text-secondary mb-0">Setelah admin menentukan hadiah, spin akan berhenti di hadiah yang sudah dipilih.</p>
-            </div>
+            </section>
           </div>
+        </div>
 
+        <section className="order-card mt-3">
           {redemptions.length === 0 ? (
-            <div className="stamp-empty-state mt-3">Belum ada penukaran. Lengkapi 6 stamp unik dulu.</div>
+            <div className="stamp-empty-state">Belum ada penukaran. Lengkapi 6 stamp unik dulu.</div>
           ) : (
-            <div className="stamp-redemption-list mt-3">
+            <div className="stamp-redemption-list">
               {redemptions.map((redemption) => {
                 const reward = stampRewards.find((item) => item.id === redemption.prizeId);
                 const isVisibleResult = spinState.prizeId === redemption.prizeId && spinState.redemptionId === redemption.id;

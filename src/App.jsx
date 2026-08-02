@@ -11,6 +11,8 @@ import AdminLogin from './views/AdminLogin';
 import AdminDashboard from './views/AdminDashboard';
 import PageView from './views/PageView';
 import StampView from './views/StampView';
+import WalletView from './views/WalletView';
+import VouchersView from './views/VouchersView';
 import ChatWidget from './components/ChatWidget';
 import { products as initialProducts } from './data/products';
 import { supabase } from './lib/supabaseClient';
@@ -45,6 +47,12 @@ const parseRoute = () => {
   }
   if (hash === '#/stamp') {
     return { view: 'stamp' };
+  }
+  if (hash === '#/wallet') {
+    return { view: 'wallet' };
+  }
+  if (hash === '#/vouchers') {
+    return { view: 'vouchers' };
   }
   if (hash === '#/blog') {
     return { view: 'page', page: 'blog' };
@@ -157,14 +165,14 @@ function App() {
         return;
       }
 
-      if (route.view === 'transactions') {
+      if (['transactions', 'wallet', 'vouchers'].includes(route.view)) {
         if (!user) {
           setCurrentView('home');
           setIsLoginOpen(true);
           window.location.hash = '';
           return;
         }
-        setCurrentView('transactions');
+        setCurrentView(route.view);
         return;
       }
 
@@ -177,6 +185,11 @@ function App() {
       if (route.view === 'invoice') {
         setInvoiceData(findTransactionByInvoiceId(route.invoiceId));
         setCurrentView('invoice');
+        return;
+      }
+
+      if (route.view === 'stamp') {
+        setCurrentView('stamp');
         return;
       }
 
@@ -259,6 +272,20 @@ function App() {
     } else if (view === 'stamp') {
       setCurrentView('stamp');
       window.location.hash = '#/stamp';
+    } else if (view === 'wallet') {
+      if (!user) {
+        setIsLoginOpen(true);
+        return;
+      }
+      setCurrentView('wallet');
+      window.location.hash = '#/wallet';
+    } else if (view === 'vouchers') {
+      if (!user) {
+        setIsLoginOpen(true);
+        return;
+      }
+      setCurrentView('vouchers');
+      window.location.hash = '#/vouchers';
     } else if (view === 'page') {
       setActivePage(data);
       setCurrentView('page');
@@ -321,7 +348,7 @@ function App() {
 
       <main id="main-content">
         {currentView === 'home' && (
-          <HomeView products={products} onSelectProduct={handleSelectProduct} />
+          <HomeView products={products} onSelectProduct={handleSelectProduct} onNavigate={handleNavigate} />
         )}
         {currentView === 'order' && (
           <OrderView
@@ -348,6 +375,18 @@ function App() {
           <StampView
             user={user}
             onLoginOpen={() => setIsLoginOpen(true)}
+            onNavigate={handleNavigate}
+          />
+        )}
+        {currentView === 'wallet' && (
+          <WalletView
+            user={user}
+            onNavigate={handleNavigate}
+          />
+        )}
+        {currentView === 'vouchers' && (
+          <VouchersView
+            user={user}
             onNavigate={handleNavigate}
           />
         )}

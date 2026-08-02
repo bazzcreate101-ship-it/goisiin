@@ -183,12 +183,12 @@ export default function Header({
                             </a>
                           </li>
                           <li className="dd-item">
-                            <a href="#" onClick={(e) => { e.preventDefault(); alert("Fitur Dompet sedang dipersiapkan!"); setProfileDropdownOpen(false); }}>
+                            <a href="#/wallet" onClick={(e) => { handleNavClick('wallet', e); setProfileDropdownOpen(false); }}>
                               <i className="bx bx-wallet me-2"></i> Dompet Saya
                             </a>
                           </li>
                           <li className="dd-item">
-                            <a href="#" onClick={(e) => { e.preventDefault(); alert("Fitur Voucher saya!"); setProfileDropdownOpen(false); }}>
+                            <a href="#/vouchers" onClick={(e) => { handleNavClick('vouchers', e); setProfileDropdownOpen(false); }}>
                               <i className="bx bx-coupon me-2"></i> Voucher Saya
                             </a>
                           </li>

@@ -2,14 +2,26 @@ import { STAMP_MIN_TRANSACTION, STAMP_REQUIRED_UNIQUE, stampRewards, stampTypes 
 import { readStorageList, writeStorageList } from './storage';
 
 const STAMP_EVENTS_KEY = 'goisiin_stamp_events';
-const STAMP_TRADES_KEY = 'goisiin_stamp_trades';
 const STAMP_REDEMPTIONS_KEY = 'goisiin_stamp_redemptions';
 const STAMP_AUDIT_KEY = 'goisiin_stamp_audit_logs';
 const VOUCHER_CODES_KEY = 'goisiin_stamp_voucher_codes';
+const STAMP_REDEEM_CODES_KEY = 'goisiin_stamp_redeem_codes';
 
 const nowText = () => new Date().toLocaleString('id-ID');
 const nowIso = () => new Date().toISOString();
 const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const makeStampCode = (stampNo) => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let token = '';
+  if (window.crypto?.getRandomValues) {
+    const buffer = new Uint32Array(10);
+    window.crypto.getRandomValues(buffer);
+    token = Array.from(buffer, (value) => alphabet[value % alphabet.length]).join('');
+  } else {
+    token = Array.from({ length: 10 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+  }
+  return `GSI-S${Number(stampNo)}-${token.slice(0, 5)}-${token.slice(5)}`;
+};
 
 export const normalizeEmail = (value) => String(value || '').trim().toLowerCase().slice(0, 120);
 export const cleanClaimText = (value, limit = 160) => String(value || '').trim().replace(/[<>`{}]/g, '').slice(0, limit);
@@ -22,20 +34,20 @@ function saveStampEvents(events) {
   writeStorageList(STAMP_EVENTS_KEY, events.slice(-1000));
 }
 
-export function getStampTrades() {
-  return readStorageList(STAMP_TRADES_KEY);
-}
-
-function saveStampTrades(trades) {
-  writeStorageList(STAMP_TRADES_KEY, trades.slice(-500));
-}
-
 export function getStampRedemptions() {
   return readStorageList(STAMP_REDEMPTIONS_KEY);
 }
 
 function saveStampRedemptions(redemptions) {
   writeStorageList(STAMP_REDEMPTIONS_KEY, redemptions.slice(-500));
+}
+
+export function getStampRedeemCodes() {
+  return readStorageList(STAMP_REDEEM_CODES_KEY);
+}
+
+function saveStampRedeemCodes(codes) {
+  writeStorageList(STAMP_REDEEM_CODES_KEY, codes.slice(-500));
 }
 
 export function getStampAuditLogs() {
@@ -81,15 +93,8 @@ function addEvent(event) {
   return next;
 }
 
-export function getPendingLocks(email) {
-  const userEmail = normalizeEmail(email);
-  const locks = Object.fromEntries(stampTypes.map((stamp) => [stamp.id, 0]));
-  getStampTrades()
-    .filter((trade) => trade.status === 'pending' && normalizeEmail(trade.fromEmail) === userEmail)
-    .forEach((trade) => {
-      locks[Number(trade.offeredStamp)] = (locks[Number(trade.offeredStamp)] || 0) + 1;
-    });
-  return locks;
+export function getPendingLocks() {
+  return Object.fromEntries(stampTypes.map((stamp) => [stamp.id, 0]));
 }
 
 export function getStampInventory(email, { includeLocks = false } = {}) {
@@ -190,94 +195,103 @@ export function revokeStampFromUser(email, stampNo, actor = 'admin') {
   return { ok: true, event };
 }
 
-export function giftStamp(fromEmail, toEmail, stampNo) {
-  const from = normalizeEmail(fromEmail);
-  const to = normalizeEmail(toEmail);
+export function createStampRedeemCode(ownerEmail, stampNo) {
+  const owner = normalizeEmail(ownerEmail);
   const safeStamp = Number(stampNo);
-  const { available } = getStampInventory(from, { includeLocks: true });
-  if (!from || !to || from === to || !isValidStampNo(safeStamp) || available[safeStamp] <= 0) {
+  const { available } = getStampInventory(owner, { includeLocks: true });
+  if (!owner || !isValidStampNo(safeStamp) || available[safeStamp] <= 0) {
     return { ok: false, reason: 'not_available' };
   }
-  const giftId = makeId('gift');
-  addEvent({ kind: 'gift_out', userEmail: from, stampNo: safeStamp, delta: -1, relatedUserEmail: to, giftId, note: `Gift ke ${to}` });
-  addEvent({ kind: 'gift_in', userEmail: to, stampNo: safeStamp, delta: 1, relatedUserEmail: from, giftId, note: `Gift dari ${from}` });
-  appendAudit('user_gift_stamp', from, `${from} mengirim stamp ${safeStamp} ke ${to}`);
-  return { ok: true, giftId };
-}
 
-export function createTradeOffer(fromEmail, toEmail, offeredStamp, requestedStamp) {
-  const from = normalizeEmail(fromEmail);
-  const to = normalizeEmail(toEmail);
-  const offer = Number(offeredStamp);
-  const request = Number(requestedStamp);
-  const { available } = getStampInventory(from, { includeLocks: true });
-  if (!from || !to || from === to || !isValidStampNo(offer) || !isValidStampNo(request) || available[offer] <= 0) {
-    return { ok: false, reason: 'not_available' };
+  const codes = getStampRedeemCodes();
+  let code = makeStampCode(safeStamp);
+  while (codes.some((item) => item.code === code)) {
+    code = makeStampCode(safeStamp);
   }
-  const trades = getStampTrades();
-  const trade = {
-    id: makeId('trade'),
-    fromEmail: from,
-    toEmail: to,
-    offeredStamp: offer,
-    requestedStamp: request,
-    status: 'pending',
+
+  const redeemCode = {
+    id: makeId('stampcode'),
+    code,
+    stampNo: safeStamp,
+    ownerEmail: owner,
+    status: 'active',
     createdAt: nowText(),
-    expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAtIso: nowIso(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   };
-  trades.unshift(trade);
-  saveStampTrades(trades);
-  appendAudit('trade_created', from, `${from} menawarkan stamp ${offer} ke ${to}, minta stamp ${request}`);
-  return { ok: true, trade };
+
+  addEvent({
+    kind: 'code_out',
+    userEmail: owner,
+    stampNo: safeStamp,
+    delta: -1,
+    redeemCodeId: redeemCode.id,
+    note: `Dibuat kode redeem ${code}`,
+  });
+  codes.unshift(redeemCode);
+  saveStampRedeemCodes(codes);
+  appendAudit('stamp_code_created', owner, `${owner} membuat kode ${code} untuk stamp ${safeStamp}`);
+  return { ok: true, code: redeemCode };
 }
 
-export function acceptTradeOffer(tradeId, actorEmail) {
-  const actor = normalizeEmail(actorEmail);
-  const trades = getStampTrades();
-  const trade = trades.find((item) => item.id === tradeId);
-  if (!trade || trade.status !== 'pending' || normalizeEmail(trade.toEmail) !== actor) {
-    return { ok: false, reason: 'invalid_trade' };
+export function redeemStampCode(codeValue, redeemerEmail) {
+  const redeemer = normalizeEmail(redeemerEmail);
+  const safeCode = String(codeValue || '').trim().toUpperCase().replace(/\s+/g, '');
+  const codes = getStampRedeemCodes();
+  const code = codes.find((item) => String(item.code || '').toUpperCase() === safeCode);
+
+  if (!redeemer || !code || code.status !== 'active') {
+    return { ok: false, reason: 'invalid_code' };
+  }
+  if (normalizeEmail(code.ownerEmail) === redeemer) {
+    return { ok: false, reason: 'self_redeem_blocked' };
+  }
+  if (code.expiresAt && new Date(code.expiresAt).getTime() < Date.now()) {
+    code.status = 'expired';
+    code.updatedAt = nowText();
+    saveStampRedeemCodes(codes);
+    return { ok: false, reason: 'expired' };
   }
 
-  const from = normalizeEmail(trade.fromEmail);
-  const to = normalizeEmail(trade.toEmail);
-  const fromInventory = getStampInventory(from, { includeLocks: true });
-  const fromAvailable = {
-    ...fromInventory.available,
-    [trade.offeredStamp]: (fromInventory.available[trade.offeredStamp] || 0) + 1,
-  };
-  const toAvailable = getStampInventory(to, { includeLocks: true }).available;
-  if (fromAvailable[trade.offeredStamp] <= 0 || toAvailable[trade.requestedStamp] <= 0) {
-    trade.status = 'expired';
-    trade.updatedAt = nowText();
-    saveStampTrades(trades);
-    return { ok: false, reason: 'stamp_unavailable' };
-  }
-
-  addEvent({ kind: 'trade_out', userEmail: from, stampNo: trade.offeredStamp, delta: -1, relatedUserEmail: to, tradeId, note: `Barter ke ${to}` });
-  addEvent({ kind: 'trade_in', userEmail: to, stampNo: trade.offeredStamp, delta: 1, relatedUserEmail: from, tradeId, note: `Barter dari ${from}` });
-  addEvent({ kind: 'trade_out', userEmail: to, stampNo: trade.requestedStamp, delta: -1, relatedUserEmail: from, tradeId, note: `Barter ke ${from}` });
-  addEvent({ kind: 'trade_in', userEmail: from, stampNo: trade.requestedStamp, delta: 1, relatedUserEmail: to, tradeId, note: `Barter dari ${to}` });
-
-  trade.status = 'accepted';
-  trade.updatedAt = nowText();
-  saveStampTrades(trades);
-  appendAudit('trade_accepted', actor, `${actor} menerima barter ${tradeId}`);
-  return { ok: true, trade };
+  code.status = 'redeemed';
+  code.redeemedBy = redeemer;
+  code.redeemedAt = nowText();
+  code.updatedAt = nowText();
+  addEvent({
+    kind: 'code_in',
+    userEmail: redeemer,
+    stampNo: code.stampNo,
+    delta: 1,
+    relatedUserEmail: normalizeEmail(code.ownerEmail),
+    redeemCodeId: code.id,
+    note: `Redeem kode dari ${normalizeEmail(code.ownerEmail)}`,
+  });
+  saveStampRedeemCodes(codes);
+  appendAudit('stamp_code_redeemed', redeemer, `${redeemer} redeem kode ${code.code} dari ${code.ownerEmail}`);
+  return { ok: true, code };
 }
 
-export function rejectTradeOffer(tradeId, actorEmail) {
-  const actor = normalizeEmail(actorEmail);
-  const trades = getStampTrades();
-  const trade = trades.find((item) => item.id === tradeId);
-  if (!trade || trade.status !== 'pending' || ![normalizeEmail(trade.toEmail), normalizeEmail(trade.fromEmail)].includes(actor)) {
-    return { ok: false, reason: 'invalid_trade' };
+export function cancelStampRedeemCode(codeId, ownerEmail) {
+  const owner = normalizeEmail(ownerEmail);
+  const codes = getStampRedeemCodes();
+  const code = codes.find((item) => item.id === codeId);
+  if (!owner || !code || !['active', 'expired'].includes(code.status) || normalizeEmail(code.ownerEmail) !== owner) {
+    return { ok: false, reason: 'invalid_code' };
   }
-  trade.status = normalizeEmail(trade.fromEmail) === actor ? 'cancelled' : 'rejected';
-  trade.updatedAt = nowText();
-  saveStampTrades(trades);
-  appendAudit('trade_closed', actor, `${actor} menutup barter ${tradeId}`);
-  return { ok: true, trade };
+
+  code.status = 'cancelled';
+  code.updatedAt = nowText();
+  addEvent({
+    kind: 'code_refund',
+    userEmail: owner,
+    stampNo: code.stampNo,
+    delta: 1,
+    redeemCodeId: code.id,
+    note: `Kode redeem ${code.code} dibatalkan`,
+  });
+  saveStampRedeemCodes(codes);
+  appendAudit('stamp_code_cancelled', owner, `${owner} membatalkan kode ${code.code}`);
+  return { ok: true, code };
 }
 
 export function createRedemption(email) {

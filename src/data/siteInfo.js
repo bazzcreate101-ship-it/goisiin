@@ -4,7 +4,7 @@ export const siteMechanics = [
   'Riwayat transaksi bisa dibuka dari menu Transaksi setelah user login.',
   'Metode pembayaran yang tersedia meliputi QRIS, e-wallet, virtual account bank, Alfamart, dan Indomaret.',
   'Promo Stamp Berhadiah memberi 1 stamp acak untuk setiap transaksi sukses minimal Rp100.000. Kumpulkan stamp 1 sampai 6 untuk klaim hadiah.',
-  'Stamp duplicate bisa dikirim ke user lain atau dibarter melalui halaman Stamp Saya.',
+  'Stamp duplicate bisa dibagikan ke user lain dengan membuat kode redeem dari halaman Stamp Saya.',
   'Customer support tersedia melalui WhatsApp dan chat widget Goisiin.',
   'Untuk refund, pembayaran bermasalah, item belum masuk, atau komplain transaksi, chat harus dialihkan ke admin.',
 ];
