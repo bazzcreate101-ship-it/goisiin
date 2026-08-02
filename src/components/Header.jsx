@@ -76,11 +76,11 @@ export default function Header({
                   href="#" 
                   onClick={(e) => { 
                     e.preventDefault(); 
-                    alert("Promo spesial Goisiin akan segera hadir!");
+                    handleNavClick('stamp', e);
                   }} 
-                  className="nav-link"
+                  className={`nav-link ${currentView === 'stamp' ? 'active-link' : ''}`}
                 >
-                  <i className="bx bx-notepad nav__icon"></i><span>Promo</span>
+                  <i className="bx bx-gift nav__icon"></i><span>Stamp</span>
                 </a>
               </li>
             </ul>
@@ -154,6 +154,11 @@ export default function Header({
                       
                       <div className="dd-actions mt-3">
                         <ul className="dd-list">
+                          <li className="dd-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); handleNavClick('stamp', e); setProfileDropdownOpen(false); }}>
+                              <i className="bx bx-gift me-2"></i> Stamp Saya
+                            </a>
+                          </li>
                           <li className="dd-item">
                             <a href="#" onClick={(e) => { e.preventDefault(); alert("Fitur Dompet sedang dipersiapkan!"); setProfileDropdownOpen(false); }}>
                               <i className="bx bx-wallet me-2"></i> Dompet Saya

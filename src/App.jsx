@@ -10,6 +10,7 @@ import TransactionsView from './views/TransactionsView';
 import AdminLogin from './views/AdminLogin';
 import AdminDashboard from './views/AdminDashboard';
 import PageView from './views/PageView';
+import StampView from './views/StampView';
 import ChatWidget from './components/ChatWidget';
 import { products as initialProducts } from './data/products';
 import { supabase } from './lib/supabaseClient';
@@ -41,6 +42,9 @@ const parseRoute = () => {
   }
   if (hash === '#/transactions') {
     return { view: 'transactions' };
+  }
+  if (hash === '#/stamp') {
+    return { view: 'stamp' };
   }
   if (hash === '#/blog') {
     return { view: 'page', page: 'blog' };
@@ -252,6 +256,9 @@ function App() {
       }
       setCurrentView('transactions');
       window.location.hash = '#/transactions';
+    } else if (view === 'stamp') {
+      setCurrentView('stamp');
+      window.location.hash = '#/stamp';
     } else if (view === 'page') {
       setActivePage(data);
       setCurrentView('page');
@@ -333,6 +340,13 @@ function App() {
         {currentView === 'transactions' && (
           <TransactionsView
             user={user}
+            onNavigate={handleNavigate}
+          />
+        )}
+        {currentView === 'stamp' && (
+          <StampView
+            user={user}
+            onLoginOpen={() => setIsLoginOpen(true)}
             onNavigate={handleNavigate}
           />
         )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { safeJsonParse } from '../lib/storage';
+import { awardStampForTransaction } from '../lib/stampService';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
@@ -16,6 +17,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
         const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
         if (found) {
           setPaymentStatus(found.status);
+          if (found.status === 'success') awardStampForTransaction(found, 'invoice-check');
         }
       }
     }
@@ -73,6 +75,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
       const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
       const nextStatus = found?.status || 'pending';
       setPaymentStatus(nextStatus);
+      if (nextStatus === 'success') awardStampForTransaction(found, 'invoice-check');
     }, 2500);
   };
 

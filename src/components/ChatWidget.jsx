@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { paymentChannels } from '../data/products';
+import { STAMP_MIN_TRANSACTION, stampRewards, stampTypes } from '../data/stampRewards';
 import { promoInfo, siteMechanics, supportInfo } from '../data/siteInfo';
 import { safeJsonParse } from '../lib/storage';
 
@@ -96,6 +97,22 @@ export default function ChatWidget({ products, user, transactions }) {
     transactions,
     promos: promoInfo,
     mechanics: siteMechanics,
+    stampPromo: {
+      minimumTransaction: STAMP_MIN_TRANSACTION,
+      requiredUniqueStamp: stampTypes.length,
+      rules: [
+        'User mendapat 1 stamp acak dari stamp 1 sampai 6 setiap transaksi sukses minimal Rp100.000.',
+        'Stamp duplicate bisa dikirim sebagai gift atau dibarter dengan user lain.',
+        'Hadiah bisa ditukar setelah user punya stamp 1, 2, 3, 4, 5, dan 6.',
+        'Hasil spin hadiah ditentukan admin sebelum reveal dan user mengisi form klaim sesuai tipe hadiah.',
+      ],
+      rewards: stampRewards.map((reward) => ({
+        id: reward.id,
+        name: reward.name,
+        type: reward.type,
+        tier: reward.tier,
+      })),
+    },
     support: supportInfo,
   });
 

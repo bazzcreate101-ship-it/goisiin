@@ -3000,6 +3000,475 @@ footer a:hover {
   background: rgba(239, 68, 68, 0.15);
 }
 
+/* --- Goisiin Stamp Reward --- */
+.stamp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.28rem 0.7rem;
+  border: 1px solid rgba(234, 225, 96, 0.55);
+  border-radius: 999px;
+  color: #e6de55;
+  background: linear-gradient(135deg, rgba(106, 170, 74, 0.16), rgba(255, 255, 255, 0.04));
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stamp-section-title {
+  margin: 0.45rem 0 0.7rem;
+  color: #ffffff;
+  font-size: clamp(1.15rem, 2.2vw, 1.6rem);
+  font-weight: 900;
+  font-family: 'Oxanium', 'Plus Jakarta Sans', sans-serif;
+}
+
+.stamp-home-card,
+.stamp-hero,
+.stamp-guest-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(230px, 0.75fr);
+  gap: 1rem;
+  align-items: center;
+  overflow: hidden;
+  margin: 0.75rem 0 1rem;
+  padding: clamp(1rem, 2.4vw, 1.55rem);
+  border: 1px solid rgba(234, 225, 96, 0.18);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(234, 225, 96, 0.16), transparent 32%),
+    linear-gradient(135deg, rgba(18, 20, 16, 0.96), rgba(38, 45, 24, 0.94));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+.stamp-home-card::before,
+.stamp-hero::before,
+.stamp-guest-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), transparent 28%, rgba(255, 255, 255, 0.04));
+  pointer-events: none;
+}
+
+.stamp-home-card__copy,
+.stamp-hero__copy,
+.stamp-guest-card > div {
+  position: relative;
+  z-index: 1;
+}
+
+.stamp-home-card h2,
+.stamp-hero h1,
+.stamp-guest-card h1 {
+  margin: 0.65rem 0 0.65rem;
+  color: #ffffff;
+  font-family: 'Oxanium', 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.35rem, 4.4vw, 3rem);
+  line-height: 0.98;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.stamp-home-card p,
+.stamp-hero p,
+.stamp-guest-card p {
+  color: #d1d5db;
+  max-width: 620px;
+  font-size: 0.94rem;
+}
+
+.stamp-home-card__image,
+.stamp-hero__poster,
+.stamp-guest-card > img {
+  position: relative;
+  z-index: 1;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(234, 225, 96, 0.22);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.stamp-home-card__image img,
+.stamp-hero__poster img,
+.stamp-guest-card > img {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+}
+
+.stamp-hero__stats {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.stamp-hero__stats > div {
+  min-width: 112px;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.stamp-hero__stats strong {
+  display: block;
+  color: #e6de55;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.stamp-hero__stats span {
+  color: #cbd5e1;
+  font-size: 0.76rem;
+}
+
+.stamp-board {
+  border-color: rgba(234, 225, 96, 0.18) !important;
+}
+
+.stamp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stamp-slot {
+  position: relative;
+  overflow: hidden;
+  min-height: 142px;
+  border-radius: 18px;
+  border: 1px solid rgba(234, 225, 96, 0.18);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.18));
+}
+
+.stamp-slot img {
+  width: 100%;
+  height: 118px;
+  object-fit: cover;
+  display: block;
+}
+
+.stamp-slot--empty img {
+  filter: grayscale(1) brightness(0.42);
+  opacity: 0.55;
+}
+
+.stamp-slot--owned {
+  box-shadow: 0 0 0 1px rgba(234, 225, 96, 0.34), 0 14px 32px rgba(106, 170, 74, 0.12);
+}
+
+.stamp-slot__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.stamp-slot__meta span {
+  color: #f8fafc;
+  font-weight: 800;
+  font-size: 0.86rem;
+}
+
+.stamp-slot__meta strong {
+  color: #e6de55;
+  white-space: nowrap;
+}
+
+.stamp-slot__lock {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  color: #111827;
+  background: #e6de55;
+  font-weight: 900;
+  font-size: 0.68rem;
+}
+
+.stamp-form,
+.stamp-claim-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.stamp-form input,
+.stamp-form select,
+.stamp-claim-form input,
+.stamp-claim-form select,
+.stamp-claim-form textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 13px;
+  background: rgba(17, 24, 39, 0.88);
+  color: #ffffff;
+  padding: 0.68rem 0.8rem;
+  outline: none;
+}
+
+.stamp-claim-form textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.stamp-form__inline {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.stamp-claim-form .stamp-form__inline {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reward-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.reward-card {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.72);
+}
+
+.reward-card--main {
+  border-color: rgba(234, 225, 96, 0.36);
+  background: linear-gradient(145deg, rgba(106, 170, 74, 0.16), rgba(17, 24, 39, 0.78));
+}
+
+.reward-card img {
+  width: 100%;
+  height: 132px;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.reward-card div {
+  padding: 0.8rem;
+}
+
+.reward-card span {
+  color: #e6de55;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.reward-card h3 {
+  margin: 0.22rem 0 0.36rem;
+  color: #ffffff;
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.reward-card p,
+.reward-card small {
+  color: #cbd5e1;
+  font-size: 0.78rem;
+}
+
+.stamp-list,
+.stamp-admin-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 430px;
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.stamp-list__item,
+.stamp-admin-log__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.stamp-list__item--compact {
+  align-items: center;
+}
+
+.stamp-list__item strong,
+.stamp-admin-log__item strong {
+  color: #ffffff;
+}
+
+.stamp-list__item p,
+.stamp-admin-log__item span {
+  margin: 0.16rem 0 0;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+}
+
+.stamp-list__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.stamp-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.18rem 0.48rem;
+  border-radius: 999px;
+  background: rgba(106, 170, 74, 0.14);
+  color: #86efac;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.stamp-status--pending,
+.stamp-status--pending_prize {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.stamp-status--rejected,
+.stamp-status--cancelled {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.stamp-empty-state {
+  padding: 0.9rem;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.stamp-redemption-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.stamp-redemption-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.6fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(234, 225, 96, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.stamp-redemption-card h3 {
+  color: #ffffff;
+  margin: 0.5rem 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.stamp-reveal-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.stamp-spinner {
+  display: flex;
+  gap: 0.55rem;
+  overflow: hidden;
+  padding: 0.7rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.stamp-spinner span {
+  flex: 0 0 auto;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(106, 170, 74, 0.16);
+  color: #e6de55;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.stamp-spinner--active span {
+  animation: stampSpin 0.42s linear infinite;
+}
+
+@keyframes stampSpin {
+  from { transform: translateX(0); }
+  to { transform: translateX(-120px); }
+}
+
+.stamp-result {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(106, 170, 74, 0.18), rgba(234, 225, 96, 0.10));
+}
+
+.stamp-result img {
+  width: 86px;
+  height: 86px;
+  object-fit: cover;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.stamp-result h3 {
+  margin: 0.2rem 0;
+  color: #ffffff;
+}
+
+.stamp-result code {
+  display: inline-flex;
+  padding: 0.35rem 0.55rem;
+  border-radius: 10px;
+  color: #111827;
+  background: #e6de55;
+  font-weight: 900;
+}
+
+@media (max-width: 768px) {
+  .stamp-home-card,
+  .stamp-hero,
+  .stamp-guest-card,
+  .stamp-redemption-card {
+    grid-template-columns: 1fr;
+  }
+
+  .stamp-grid,
+  .reward-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stamp-form__inline,
+  .stamp-claim-form .stamp-form__inline {
+    grid-template-columns: 1fr;
+  }
+
+  .stamp-home-card__image img,
+  .stamp-hero__poster img,
+  .stamp-guest-card > img {
+    max-height: 260px;
+  }
+}
+
 
 
 

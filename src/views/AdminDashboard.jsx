@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { productImages } from '../assets/images';
+import { stampRewards, stampTypes } from '../data/stampRewards';
 import { readStorageList, safeJsonParse, writeStorageList } from '../lib/storage';
+import {
+  assignPrizeToRedemption,
+  awardStampForTransaction,
+  getStampAuditLogs,
+  getStampRedemptions,
+  getStampSummary,
+  getStampTrades,
+  grantStampToUser,
+  revokeStampFromUser,
+  updateRedemptionStatus,
+} from '../lib/stampService';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -18,6 +30,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   // Transactions & Users state
   const [adminTransactions, setAdminTransactions] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
+  const [stampRefreshKey, setStampRefreshKey] = useState(0);
+  const [stampForm, setStampForm] = useState({ email: '', stampNo: 1 });
 
   // Product state
   const [editingProduct, setEditingProduct] = useState(null);
@@ -50,14 +64,20 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   }, []);
 
   const handleUpdateTxStatus = (invoiceId, nextStatus) => {
+    let stampResult = null;
     const updated = adminTransactions.map(t => {
       if (t.invoiceId === invoiceId) {
-        return { ...t, status: nextStatus };
+        const nextTx = { ...t, status: nextStatus };
+        if (nextStatus === 'success') stampResult = awardStampForTransaction(nextTx, adminUser?.email || adminUser?.name || 'admin');
+        return nextTx;
       }
       return t;
     });
     setAdminTransactions(updated);
     writeStorageList('goisiin_transactions', updated);
+    if (stampResult?.ok) {
+      window.dispatchEvent(new Event('storage'));
+    }
   };
 
   const handleDeleteTx = (invoiceId) => {
@@ -245,6 +265,31 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     setFormData({ ...formData, denominations: updated });
   };
 
+  const reloadStampAdmin = () => setStampRefreshKey((key) => key + 1);
+  const stampRedemptions = stampRefreshKey >= 0 ? getStampRedemptions() : [];
+  const stampTrades = stampRefreshKey >= 0 ? getStampTrades() : [];
+  const stampAuditLogs = stampRefreshKey >= 0 ? getStampAuditLogs() : [];
+  const adminActor = adminUser?.email || adminUser?.name || 'admin';
+
+  const handleAdminGrantStamp = (e) => {
+    e.preventDefault();
+    const result = grantStampToUser(stampForm.email, stampForm.stampNo, adminActor);
+    if (!result.ok) {
+      alert('Gagal memberi stamp. Cek email dan nomor stamp.');
+      return;
+    }
+    reloadStampAdmin();
+  };
+
+  const handleAdminRevokeStamp = (email, stampNo) => {
+    const result = revokeStampFromUser(email, stampNo, adminActor);
+    if (!result.ok) {
+      alert('Stamp tidak tersedia untuk dicabut.');
+      return;
+    }
+    reloadStampAdmin();
+  };
+
   return (
     <div className="main main-surface py-4">
       <div className="container col-md-8 col-12">
@@ -294,6 +339,12 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
           >
             💬 Live Chat Hub
             {adminMode && <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>}
+          </button>
+          <button
+            className={`btn btn-sm ${activeTab === 'stamps' ? 'btn-success' : 'btn-outline-success'}`}
+            onClick={() => setActiveTab('stamps')}
+          >
+            Stamp Reward
           </button>
         </div>
 
@@ -719,6 +770,202 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'stamps' && (
+          <div className="row g-3">
+            <div className="col-lg-4 col-12">
+              <div className="order-card p-3 h-100">
+                <h5 className="text-success fw-bold mb-3">Kasih Stamp Manual</h5>
+                <form onSubmit={handleAdminGrantStamp} className="d-flex flex-column gap-2">
+                  <input
+                    className="form-control order-input"
+                    type="email"
+                    placeholder="Email user"
+                    value={stampForm.email}
+                    onChange={(e) => setStampForm({ ...stampForm, email: e.target.value })}
+                    list="admin-stamp-users"
+                    required
+                  />
+                  <select
+                    className="form-select order-input"
+                    value={stampForm.stampNo}
+                    onChange={(e) => setStampForm({ ...stampForm, stampNo: Number(e.target.value) })}
+                  >
+                    {stampTypes.map((stamp) => (
+                      <option value={stamp.id} key={stamp.id}>{stamp.name}</option>
+                    ))}
+                  </select>
+                  <button className="btn btn-success fw-bold" type="submit">Tambah Stamp</button>
+                </form>
+                <datalist id="admin-stamp-users">
+                  {adminUsers.map((u) => <option value={u.email} key={u.email}>{u.name}</option>)}
+                </datalist>
+              </div>
+            </div>
+
+            <div className="col-lg-8 col-12">
+              <div className="order-card p-3 h-100">
+                <h5 className="text-success fw-bold mb-3">Stamp User</h5>
+                <div className="table-responsive">
+                  <table className="table table-dark table-striped align-middle" style={{ fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Progress</th>
+                        <th>Inventory</th>
+                        <th>Cabut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminUsers.length === 0 ? (
+                        <tr><td colSpan="4" className="text-secondary text-center">Belum ada user.</td></tr>
+                      ) : adminUsers.map((u) => {
+                        const summary = getStampSummary(u.email);
+                        return (
+                          <tr key={u.email}>
+                            <td>
+                              <strong>{u.name}</strong><br />
+                              <span className="text-secondary">{u.email}</span>
+                            </td>
+                            <td>{summary.unique}/6 unik<br /><small>{summary.duplicates} duplicate</small></td>
+                            <td>
+                              <div className="d-flex flex-wrap gap-1">
+                                {stampTypes.map((stamp) => (
+                                  <span className="badge bg-success" key={stamp.id}>S{stamp.id}: {summary.counts[stamp.id] || 0}</span>
+                                ))}
+                              </div>
+                            </td>
+                            <td>
+                              <select
+                                className="form-select form-select-sm order-input"
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    handleAdminRevokeStamp(u.email, Number(e.target.value));
+                                    e.target.value = '';
+                                  }
+                                }}
+                                defaultValue=""
+                              >
+                                <option value="">Pilih</option>
+                                {stampTypes.map((stamp) => (
+                                  <option value={stamp.id} key={stamp.id}>Stamp {stamp.id}</option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-12">
+              <div className="order-card p-3">
+                <h5 className="text-success fw-bold mb-3">Redemption / Penukaran Hadiah</h5>
+                <div className="table-responsive">
+                  <table className="table table-dark table-striped align-middle" style={{ fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Status</th>
+                        <th>Hadiah</th>
+                        <th>Klaim</th>
+                        <th>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stampRedemptions.length === 0 ? (
+                        <tr><td colSpan="5" className="text-secondary text-center">Belum ada penukaran.</td></tr>
+                      ) : stampRedemptions.map((r) => (
+                        <tr key={r.id}>
+                          <td>{r.userEmail}<br /><small>{r.id}</small></td>
+                          <td><span className="badge bg-success">{r.status}</span></td>
+                          <td>
+                            <select
+                              className="form-select form-select-sm order-input"
+                              value={r.prizeId || ''}
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  assignPrizeToRedemption(r.id, e.target.value, adminActor);
+                                  reloadStampAdmin();
+                                }
+                              }}
+                            >
+                              <option value="">Pilih hadiah</option>
+                              {stampRewards.map((reward) => (
+                                <option value={reward.id} key={reward.id}>{reward.name}</option>
+                              ))}
+                            </select>
+                            {r.voucherCode && <code className="d-block mt-1">{r.voucherCode}</code>}
+                          </td>
+                          <td>
+                            {r.claimDetails ? (
+                              <small>
+                                {r.claimDetails.fullName || r.claimDetails.walletProvider}<br />
+                                {r.claimDetails.phone || r.claimDetails.walletNumber}<br />
+                                {r.claimDetails.address || '-'}
+                              </small>
+                            ) : <span className="text-secondary">Belum isi</span>}
+                          </td>
+                          <td>
+                            <select
+                              className="form-select form-select-sm order-input"
+                              value={r.status}
+                              onChange={(e) => {
+                                updateRedemptionStatus(r.id, e.target.value, adminActor);
+                                reloadStampAdmin();
+                              }}
+                            >
+                              <option value="pending_prize">Menunggu Hadiah</option>
+                              <option value="prize_assigned">Hadiah Dipilih</option>
+                              <option value="claimed">Diklaim User</option>
+                              <option value="fulfilled">Selesai Dikirim</option>
+                              <option value="rejected">Ditolak</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-lg-6 col-12">
+              <div className="order-card p-3 h-100">
+                <h5 className="text-success fw-bold mb-3">Trade / Gift Log</h5>
+                <div className="stamp-admin-log">
+                  {stampTrades.length === 0 ? (
+                    <p className="text-secondary">Belum ada barter.</p>
+                  ) : stampTrades.map((trade) => (
+                    <div className="stamp-admin-log__item" key={trade.id}>
+                      <strong>{trade.status}</strong>
+                      <span>{trade.fromEmail} menawarkan S{trade.offeredStamp} ke {trade.toEmail}, minta S{trade.requestedStamp}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="col-lg-6 col-12">
+              <div className="order-card p-3 h-100">
+                <h5 className="text-success fw-bold mb-3">Audit Log Stamp</h5>
+                <div className="stamp-admin-log">
+                  {stampAuditLogs.length === 0 ? (
+                    <p className="text-secondary">Belum ada audit.</p>
+                  ) : stampAuditLogs.slice(0, 20).map((log) => (
+                    <div className="stamp-admin-log__item" key={log.id}>
+                      <strong>{log.action}</strong>
+                      <span>{log.detail}<br />{log.createdAt}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}

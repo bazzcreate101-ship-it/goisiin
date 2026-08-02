@@ -3,6 +3,7 @@ import Banner from '../components/Banner';
 import FlashSale from '../components/FlashSale';
 import Categories from '../components/Categories';
 import { bannerImages } from '../assets/images';
+import { STAMP_MIN_TRANSACTION, stampPosterImage } from '../data/stampRewards';
 
 export default function HomeView({ products, onSelectProduct }) {
   const [activeCategory, setActiveCategory] = useState('popular');
@@ -23,6 +24,20 @@ export default function HomeView({ products, onSelectProduct }) {
       <Banner />
 
       <div className="container col-md-8 col-12">
+        <section className="stamp-home-card">
+          <div className="stamp-home-card__copy">
+            <span className="stamp-eyebrow">Promo Stamp Berhadiah</span>
+            <h2>Kumpulkan 6 stamp unik, rebut hadiah utama.</h2>
+            <p>
+              Dapatkan 1 stamp acak setiap transaksi sukses minimal Rp{STAMP_MIN_TRANSACTION.toLocaleString('id-ID')}.
+              Duplicate bisa dikirim atau dibarter dengan user lain.
+            </p>
+            <a href="#/stamp" className="btn btn-success fw-bold">Mulai Kumpulkan Stamp</a>
+          </div>
+          <div className="stamp-home-card__image">
+            <img src={stampPosterImage} alt="Promo Stamp Berhadiah" />
+          </div>
+        </section>
 
         {/* 2. LIST PRODUCT WRAPPER — same structure as original */}
         <div className="list-product">
