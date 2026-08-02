@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-const PREMZONE_API_KEY = 'sk-up048z-c1a5e8a921c1527be96202049595bf0a';
+const PREMZONE_API_KEY = import.meta.env.VITE_PREMZONE_API_KEY || 'sk-up048z-c1a5e8a921c1527be96202049595bf0a';
 const PREMZONE_BASE_URL = 'https://api.premzone.co/v1/chat/completions';
+
 
 export default function ChatWidget({ products }) {
   const [isOpen, setIsOpen] = useState(false);
