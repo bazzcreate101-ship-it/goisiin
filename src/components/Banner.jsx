@@ -1,53 +1,66 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const Banner = () => {
-  const swiperRef = useRef(null);
+const bannerImages = [
+  "/assets/banner/slide_1769171315.webp",
+  "/assets/banner/slide_1773165603.webp",
+  "/assets/banner/slide_1767514787.webp",
+  "/assets/banner/slide_1765284294.webp",
+  "/assets/banner/slide_1753019433.webp",
+  "/assets/banner/slide_1751769782.webp"
+];
+
+export default function Banner() {
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    if (window.Swiper) {
-      new window.Swiper('.banner-swiper', {
-        pagination: {
-          el: '.swiper-pagination',
-          clickable: true,
-        },
-        loop: true,
-        autoplay: {
-          delay: 3000,
-          disableOnInteraction: false,
-        },
-      });
-    }
+    const timer = setInterval(() => {
+      setActiveIndex((prevIndex) => (prevIndex + 1) % bannerImages.length);
+    }, 5000);
+    return () => clearInterval(timer);
   }, []);
 
   return (
-    <div className="container col-md-8 col-12">
-      <div className="banner-frame skeleton rounded-md mx-auto">
-        <div className="swiper banner-swiper rounded-md" ref={swiperRef}>
-          <div className="swiper-wrapper">
-            <div className="swiper-slide">
-              <img src="https://pusat.grv.co.id/image/banner/slide_1769171315.webp" className="banner-slide-image skeleton" alt="Banner slide 1" />
-            </div>
-            <div className="swiper-slide">
-              <img src="https://pusat.grv.co.id/image/banner/slide_1773165603.webp" className="banner-slide-image skeleton" alt="Banner slide 2" />
-            </div>
-            <div className="swiper-slide">
-              <img src="https://pusat.grv.co.id/image/banner/slide_1767514787.webp" className="banner-slide-image skeleton" alt="Banner slide 3" />
-            </div>
-            <div className="swiper-slide">
-              <img src="https://pusat.grv.co.id/image/banner/slide_1765284294.webp" className="banner-slide-image skeleton" alt="Banner slide 4" />
-            </div>
-            <div className="swiper-slide">
-              <img src="https://pusat.grv.co.id/image/banner/slide_1753019433.webp" className="banner-slide-image skeleton" alt="Banner slide 5" />
-            </div>
-            <div className="swiper-slide">
-              <img src="https://pusat.grv.co.id/image/banner/slide_1751769782.webp" className="banner-slide-image skeleton" alt="Banner slide 6" />
-            </div>
+    <div className="container col-md-8 col-12 my-3">
+      <div className="banner-frame position-relative rounded-md mx-auto overflow-hidden" style={{ height: '320px', aspectRatio: 'auto' }}>
+        {bannerImages.map((imgUrl, index) => (
+          <div 
+            key={index} 
+            className="w-100 h-100 position-absolute top-0 start-0 transition-opacity" 
+            style={{ 
+              opacity: index === activeIndex ? 1 : 0, 
+              transition: 'opacity 0.8s ease-in-out',
+              zIndex: index === activeIndex ? 2 : 1
+            }}
+          >
+            <img
+              src={imgUrl}
+              className="banner-slide-image w-100 h-100"
+              alt={`Banner slide ${index + 1}`}
+              decoding="async"
+              style={{ objectFit: 'cover' }}
+            />
           </div>
-          <div className="swiper-pagination"></div>
+        ))}
+        
+        {/* Pagination Dots */}
+        <div className="position-absolute bottom-0 start-50 translate-middle-x mb-3 d-flex gap-2" style={{ zIndex: 10 }}>
+          {bannerImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setActiveIndex(index)}
+              className="border-0 rounded-circle"
+              style={{
+                width: index === activeIndex ? '28px' : '8px',
+                height: '8px',
+                borderRadius: '999px',
+                backgroundColor: index === activeIndex ? '#ffc107' : 'rgba(255, 255, 255, 0.4)',
+                transition: 'all 0.3s ease'
+              }}
+              aria-label={`Slide ${index + 1}`}
+            />
+          ))}
         </div>
       </div>
     </div>
   );
-};
-
-export default Banner;
+}

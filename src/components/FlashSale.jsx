@@ -1,118 +1,148 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-const FlashSale = () => {
+const flashSaleItems = [
+  {
+    productId: 'higgs-game-island',
+    name: 'Higgs Game Island',
+    meta: 'Tukar Kartu (1B)',
+    image: '/assets/product/higgs-game-island.webp',
+    originalPrice: 'Rp 64.000',
+    price: 'Rp 63.360'
+  },
+  {
+    productId: 'higgs-game-island',
+    name: 'Higgs Game Island',
+    meta: 'Tukar Kartu (2B)',
+    image: '/assets/product/higgs-game-island.webp',
+    originalPrice: 'Rp 128.000',
+    price: 'Rp 126.720'
+  },
+  {
+    productId: 'higgs-game-island',
+    name: 'Higgs Game Island',
+    meta: 'Tukar Kartu (3B)',
+    image: '/assets/product/higgs-game-island.webp',
+    originalPrice: 'Rp 192.000',
+    price: 'Rp 190.080'
+  },
+  {
+    productId: 'mobile-legend',
+    name: 'Mobile Legend',
+    meta: '250 Diamonds',
+    image: '/assets/product/mobile-legend.webp',
+    originalPrice: 'Rp 77.000',
+    price: 'Rp 69.300'
+  },
+  {
+    productId: 'free-fire',
+    name: 'Free Fire',
+    meta: '355 Diamonds',
+    image: '/assets/product/free-fire.webp',
+    originalPrice: 'Rp 55.000',
+    price: 'Rp 49.500'
+  },
+  {
+    productId: 'valorant',
+    name: 'Valorant',
+    meta: '1000 VP',
+    image: '/assets/product/valorant.webp',
+    originalPrice: 'Rp 120.000',
+    price: 'Rp 108.000'
+  }
+];
+
+export default function FlashSale({ onSelectProduct }) {
+  // Let's set countdown to count down 8 hours from now repeatedly, or show a timer
+  const [timeLeft, setTimeLeft] = useState({ hours: '08', minutes: '00', seconds: '00' });
+
+  useEffect(() => {
+    // End time is 8 hours from now
+    const endTime = Date.now() + 8 * 60 * 60 * 1000;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const diff = endTime - now;
+
+      if (diff <= 0) {
+        clearInterval(interval);
+        setTimeLeft({ hours: '00', minutes: '00', seconds: '00' });
+      } else {
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+        setTimeLeft({
+          hours: h < 10 ? '0' + h : String(h),
+          minutes: m < 10 ? '0' + m : String(m),
+          seconds: s < 10 ? '0' + s : String(s)
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleCardClick = (prodId, e) => {
+    e.preventDefault();
+    onSelectProduct(prodId);
+  };
+
+  // Duplicate items for seamless marquee scrolling
+  const marqueeItems = [...flashSaleItems, ...flashSaleItems];
+
   return (
-    <div className="container col-md-8 col-12">
-      <section className="flash-sale-section mb-4">
-        <div className="flash-sale-container">
-          <div className="flash-sale-header">
-            <div className="flash-sale-heading">
-              <span className="flash-sale-badge">Flash Sale</span>
-              <p className="flash-sale-subtext">Segera checkout sebelum <span className="flash-sale-subtext__wrap">stok promo habis.</span></p>
-            </div>
-            <div className="flash-sale-countdown">
-              <span className="flash-sale-countdown__label">Berakhir dalam</span>
-              <div className="flash-sale-countdown__timer">
-                <span id="countdown-hours" className="flash-sale-countdown__time">144</span>
-                <span className="flash-sale-countdown__separator">:</span>
-                <span id="countdown-minutes" className="flash-sale-countdown__time">27</span>
-                <span className="flash-sale-countdown__separator">:</span>
-                <span id="countdown-seconds" className="flash-sale-countdown__time">46</span>
-              </div>
-            </div>
+    <section className="flash-sale-section mb-4">
+      <div className="flash-sale-container">
+        <div className="flash-sale-header">
+          <div className="flash-sale-heading">
+            <span className="flash-sale-badge">Flash Sale</span>
+            <p className="flash-sale-subtext">Segera checkout sebelum <span className="flash-sale-subtext__wrap">stok promo habis.</span></p>
           </div>
-          <div className="flash-sale-marquee" role="list">
-            <div className="flash-sale-track">
-              {/* Item 1 */}
-              <a href="#" className="flash-sale-card" role="listitem">
-                <span className="flash-sale-card__glow"></span>
-                <div className="flash-sale-card__thumb">
-                  <img src="https://pusat.grv.co.id/image/product/213d765bf2c78ef3b719f7b909405103.webp" alt="Netflix Premium" loading="lazy" decoding="async" />
-                  <span className="flash-sale-card__tag">Rp 25.000</span>
-                </div>
-                <div className="flash-sale-card__body">
-                  <div className="flash-sale-card__heading">
-                    <span className="flash-sale-card__title">Netflix Premium</span>
-                    <span className="flash-sale-card__discount">
-                      <strong style={{ textDecoration: 'line-through' }}>Rp 50.000</strong>
-                    </span>
-                  </div>
-                  <span className="flash-sale-card__meta" style={{ fontSize: '12px' }}>1 Bulan - Sharing</span>
-                  <div className="flash-sale-card__cta">
-                    <span className="flash-sale-card__subtitle">Mulai top up instan</span>
-                    <span className="flash-sale-card__button">Beli</span>
-                  </div>
-                </div>
-              </a>
-              {/* Item 2 */}
-              <a href="#" className="flash-sale-card" role="listitem">
-                <span className="flash-sale-card__glow"></span>
-                <div className="flash-sale-card__thumb">
-                  <img src="https://pusat.grv.co.id/image/product/213d765bf2c78ef3b719f7b909405103.webp" alt="Netflix Premium" loading="lazy" decoding="async" />
-                  <span className="flash-sale-card__tag">Rp 49.000</span>
-                </div>
-                <div className="flash-sale-card__body">
-                  <div className="flash-sale-card__heading">
-                    <span className="flash-sale-card__title">Netflix Premium</span>
-                    <span className="flash-sale-card__discount">
-                      <strong style={{ textDecoration: 'line-through' }}>Rp 98.000</strong>
-                    </span>
-                  </div>
-                  <span className="flash-sale-card__meta" style={{ fontSize: '12px' }}>1 Bulan - Private</span>
-                  <div className="flash-sale-card__cta">
-                    <span className="flash-sale-card__subtitle">Mulai top up instan</span>
-                    <span className="flash-sale-card__button">Beli</span>
-                  </div>
-                </div>
-              </a>
-              {/* Item 3 */}
-              <a href="#" className="flash-sale-card" role="listitem">
-                <span className="flash-sale-card__glow"></span>
-                <div className="flash-sale-card__thumb">
-                  <img src="https://pusat.grv.co.id/image/product/cd43c3962845ee8e89037fdfdaf0c4c2.webp" alt="Higgs Game Island" loading="lazy" decoding="async" />
-                  <span className="flash-sale-card__tag">Rp 63.360</span>
-                </div>
-                <div className="flash-sale-card__body">
-                  <div className="flash-sale-card__heading">
-                    <span className="flash-sale-card__title">Higgs Game Island</span>
-                    <span className="flash-sale-card__discount">
-                      <strong style={{ textDecoration: 'line-through' }}>Rp 64.000</strong>
-                    </span>
-                  </div>
-                  <span className="flash-sale-card__meta" style={{ fontSize: '12px' }}>Tukar Kartu (1B)</span>
-                  <div className="flash-sale-card__cta">
-                    <span className="flash-sale-card__subtitle">Mulai top up instan</span>
-                    <span className="flash-sale-card__button">Beli</span>
-                  </div>
-                </div>
-              </a>
-              {/* Item 4 */}
-              <a href="#" className="flash-sale-card" role="listitem">
-                <span className="flash-sale-card__glow"></span>
-                <div className="flash-sale-card__thumb">
-                  <img src="https://pusat.grv.co.id/image/product/cd43c3962845ee8e89037fdfdaf0c4c2.webp" alt="Higgs Game Island" loading="lazy" decoding="async" />
-                  <span className="flash-sale-card__tag">Rp 126.720</span>
-                </div>
-                <div className="flash-sale-card__body">
-                  <div className="flash-sale-card__heading">
-                    <span className="flash-sale-card__title">Higgs Game Island</span>
-                    <span className="flash-sale-card__discount">
-                      <strong style={{ textDecoration: 'line-through' }}>Rp 128.000</strong>
-                    </span>
-                  </div>
-                  <span className="flash-sale-card__meta" style={{ fontSize: '12px' }}>Tukar Kartu (2B)</span>
-                  <div className="flash-sale-card__cta">
-                    <span className="flash-sale-card__subtitle">Mulai top up instan</span>
-                    <span className="flash-sale-card__button">Beli</span>
-                  </div>
-                </div>
-              </a>
+          <div className="flash-sale-countdown">
+            <span className="flash-sale-countdown__label">Berakhir dalam</span>
+            <div className="flash-sale-countdown__timer">
+              <span id="countdown-hours" className="flash-sale-countdown__time">{timeLeft.hours}</span>
+              <span className="flash-sale-countdown__separator">:</span>
+              <span id="countdown-minutes" className="flash-sale-countdown__time">{timeLeft.minutes}</span>
+              <span className="flash-sale-countdown__separator">:</span>
+              <span id="countdown-seconds" className="flash-sale-countdown__time">{timeLeft.seconds}</span>
             </div>
           </div>
         </div>
-      </section>
-    </div>
-  );
-};
 
-export default FlashSale;
+        <div className="flash-sale-marquee" role="list">
+          <div className="flash-sale-track">
+            {marqueeItems.map((item, idx) => (
+              <a 
+                href={`#/order/game/${item.productId}`} 
+                className="flash-sale-card" 
+                key={idx} 
+                onClick={(e) => handleCardClick(item.productId, e)}
+                role="listitem"
+              >
+                <span className="flash-sale-card__glow"></span>
+                <div className="flash-sale-card__thumb">
+                  <img src={item.image} alt={item.name} loading="lazy" />
+                  <span className="flash-sale-card__tag">{item.price}</span>
+                </div>
+                <div className="flash-sale-card__body">
+                  <div className="flash-sale-card__heading">
+                    <span className="flash-sale-card__title text-white">{item.name}</span>
+                    <span className="flash-sale-card__discount">
+                      <strong style={{ textDecoration: 'line-through' }}>{item.originalPrice}</strong>
+                    </span>
+                  </div>
+                  <span className="flash-sale-card__meta">{item.meta}</span>
+                  <div className="flash-sale-card__cta">
+                    <span className="flash-sale-card__subtitle text-secondary">Mulai top up instan</span>
+                    <span className="flash-sale-card__button">Beli</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

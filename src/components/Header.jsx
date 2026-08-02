@@ -1,49 +1,169 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-const Header = () => {
+export default function Header({ 
+  currentView, 
+  onNavigate, 
+  onSearchOpen: onToggleSearch, 
+  isSearchOpen, 
+  onLoginOpen: onOpenLogin, 
+  user, 
+  onLogout 
+}) {
+  const isLoggedIn = !!user;
+  const userProfile = user;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  const handleNavClick = (view, e) => {
+    e.preventDefault();
+    onNavigate(view);
+    setMobileMenuOpen(false);
+  };
+
   return (
     <header id="header" className="header-sticky">
       <nav className="navbar navbar-expand-lg navbar-dark glass-nav py-2 px-0" role="navigation" aria-label="Main Navigation">
         <div className="container col-md-8 col-12 d-flex align-items-center justify-content-between">
-          <a href="/" className="navbar-brand flex-shrink-1">
-            <img className="img-logo" src="https://pusat.grv.co.id/_azure/garudavoucher__logo.png" alt="Garuda Voucher Indonesia" />
+          
+          {/* BRAND */}
+          <a href="#" onClick={(e) => handleNavClick('home', e)} className="navbar-brand flex-shrink-1">
+            <img className="img-logo" src="/assets/logo.png" alt="Garuda Voucher Indonesia" />
           </a>
 
-          <div className="collapse navbar-collapse gv-main-nav order-lg-1 ms-lg-3" id="mainNav">
+          {/* MENU UTAMA */}
+          <div className={`collapse navbar-collapse gv-main-nav order-lg-1 ms-lg-3 ${mobileMenuOpen ? 'show' : ''}`} id="mainNav">
             <ul className="navbar-nav gv-nav-list ms-lg-0 me-auto mb-0 align-items-lg-stretch">
               <li className="nav-item">
-                <a href="/" className="nav-link active-link">
-                  <i className='bx bx-home-alt nav__icon'></i><span>Home</span>
+                <a 
+                  href="#" 
+                  onClick={(e) => handleNavClick('home', e)} 
+                  className={`nav-link ${currentView === 'home' ? 'active-link' : ''}`}
+                >
+                  <i className="bx bx-home-alt nav__icon"></i><span>Home</span>
                 </a>
               </li>
               <li className="nav-item">
-                <a href="#" className="nav-link" id="btn-login" data-bs-toggle="modal" data-bs-target="#exampleModal">
-                  <i className='bx bx-history nav__icon'></i><span>Transaksi</span>
+                <a href="#" onClick={(e) => { e.preventDefault(); onOpenLogin(); }} className="nav-link">
+                  <i className="bx bx-history nav__icon"></i><span>Transaksi</span>
                 </a>
               </li>
               <li className="nav-item">
-                <a href="#" className="nav-link" id="btn-login" data-bs-toggle="modal" data-bs-target="#exampleModal">
-                  <i className='bx bx-notepad nav__icon'></i><span>Promo</span>
+                <a href="#" onClick={(e) => { e.preventDefault(); onOpenLogin(); }} className="nav-link">
+                  <i className="bx bx-notepad nav__icon"></i><span>Promo</span>
                 </a>
               </li>
             </ul>
-            <div className="dd-backdrop d-none" id="ddBackdrop"></div>
           </div>
 
+          {/* ACTIONS: Search + Profile/Login + Toggler */}
           <div className="navbar-actions d-flex align-items-center ms-auto order-lg-3 gap-2">
+            
+            {/* Search Trigger */}
             <div className="navbar-live-search-trigger me-1 d-inline-flex">
-              <button id="openSearchBar" type="button" className="btn btn-sm d-inline-flex align-items-center gap-1" aria-label="Buka pencarian">
-                <i className="bi bi-search"></i>
-                <span className="d-none d-md-inline">Cari</span>
+              <button 
+                id="openSearchBar" 
+                type="button" 
+                className="btn btn-sm d-inline-flex align-items-center gap-1" 
+                onClick={onToggleSearch}
+                aria-label="Buka pencarian"
+              >
+                <i className={`bi ${isSearchOpen ? 'bi-x-lg' : 'bi-search'}`}></i>
+                <span className="d-none d-md-inline">{isSearchOpen ? 'Tutup' : 'Cari'}</span>
                 <span className="d-none d-lg-inline ms-1 kbd-hint">/</span>
               </button>
             </div>
 
-            <button type="button" className="btn btn-outline-warning btn-sm d-inline-flex d-lg-none" data-bs-toggle="modal" data-bs-target="#exampleModal">Login</button>
-            <button type="button" className="btn btn-outline-warning btn-sm d-none d-lg-inline-flex" data-bs-toggle="modal" data-bs-target="#exampleModal">Login</button>
-            
-            <button className="navbar-toggler" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            {/* Profile or Login */}
+            {isLoggedIn ? (
+              <div className="dropdown dd-anchor">
+                <button 
+                  className="btn btn-sm p-0 border-0 d-flex align-items-center" 
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  style={{ background: 'transparent' }}
+                  type="button"
+                >
+                  <img 
+                    src={userProfile?.picture || "https://lh3.googleusercontent.com/a/default-user=s100"} 
+                    alt="Profile" 
+                    className="profile_img" 
+                  />
+                </button>
+                
+                {profileDropdownOpen && (
+                  <div className="dropdown-menu glass-dd show d-block" style={{ position: 'absolute', right: 0, top: '42px' }}>
+                    <div className="dd-header">
+                      <img 
+                        src={userProfile?.picture || "https://lh3.googleusercontent.com/a/default-user=s100"} 
+                        alt="Avatar" 
+                        className="dd-avatar" 
+                      />
+                      <div className="dd-userblock">
+                        <span className="dd-email fw-bold">{userProfile?.name}</span>
+                        <span className="small text-secondary">{userProfile?.email}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="dd-inner mt-2">
+                      <div className="wallet-tiles">
+                        <div className="wallet-tile tile-coin">
+                          <div className="wallet-icon">🪙</div>
+                          <div className="wallet-meta">
+                            <div className="wallet-title">G-Coin</div>
+                            <div className="wallet-value text-warning">15.000</div>
+                          </div>
+                        </div>
+                        <div className="wallet-tile tile-gp">
+                          <div className="wallet-icon">🎁</div>
+                          <div className="wallet-meta">
+                            <div className="wallet-title">Poin</div>
+                            <div className="wallet-value text-info">320</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="dd-actions mt-3">
+                        <ul className="dd-list">
+                          <li className="dd-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); alert("Fitur Dompet sedang dipersiapkan!"); }}>
+                              <i className="bx bx-wallet me-2"></i> Dompet Saya
+                            </a>
+                          </li>
+                          <li className="dd-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); alert("Fitur Voucher saya!"); }}>
+                              <i className="bx bx-coupon me-2"></i> Voucher Saya
+                            </a>
+                          </li>
+                          <li className="dd-item logout">
+                            <a href="#" onClick={(e) => { e.preventDefault(); onLogout(); setProfileDropdownOpen(false); }}>
+                              <i className="bx bx-log-out me-2"></i> Keluar
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button 
+                  type="button" 
+                  className="btn btn-outline-warning btn-sm d-inline-flex" 
+                  onClick={onOpenLogin}
+                >
+                  Login
+                </button>
+              </>
+            )}
+
+            {/* Mobile Hamburger Toggler */}
+            <button 
+              className="navbar-toggler" 
+              type="button" 
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-expanded={mobileMenuOpen} 
+              aria-label="Toggle navigation"
+            >
               <span className="navbar-toggler-icon"></span>
             </button>
           </div>
@@ -51,6 +171,4 @@ const Header = () => {
       </nav>
     </header>
   );
-};
-
-export default Header;
+}
