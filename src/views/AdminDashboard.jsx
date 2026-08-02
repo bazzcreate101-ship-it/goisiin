@@ -8,9 +8,15 @@ const initialCategories = [
   { id: '6', name: 'E-Wallet' }
 ];
 
+const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+
 export default function AdminDashboard({ products, onUpdateProducts, onNavigate, adminUser, onLogout }) {
-  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'chats'
+  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'transactions' | 'users' | 'chats'
   
+  // Transactions & Users state
+  const [adminTransactions, setAdminTransactions] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
+
   // Product state
   const [editingProduct, setEditingProduct] = useState(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -29,6 +35,38 @@ export default function AdminDashboard({ products, onUpdateProducts, onNavigate,
   const [activeAdmin, setActiveAdmin] = useState('Ardan'); // 'Ardan' | 'Sarah' | 'Ardian'
   const [adminInput, setAdminInput] = useState('');
   const [adminTyping, setAdminTyping] = useState(false);
+
+  // Load transactions and users from localStorage
+  useEffect(() => {
+    const loadData = () => {
+      const savedTx = localStorage.getItem('goisiin_transactions');
+      const savedUsers = localStorage.getItem('goisiin_users');
+      if (savedTx) setAdminTransactions(JSON.parse(savedTx));
+      if (savedUsers) setAdminUsers(JSON.parse(savedUsers));
+    };
+    loadData();
+    const timer = setInterval(loadData, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleUpdateTxStatus = (invoiceId, nextStatus) => {
+    const updated = adminTransactions.map(t => {
+      if (t.invoiceId === invoiceId) {
+        return { ...t, status: nextStatus };
+      }
+      return t;
+    });
+    setAdminTransactions(updated);
+    localStorage.setItem('goisiin_transactions', JSON.stringify(updated));
+  };
+
+  const handleDeleteTx = (invoiceId) => {
+    if (window.confirm(`Kakak yakin ingin menghapus invoice #${invoiceId}?`)) {
+      const updated = adminTransactions.filter(t => t.invoiceId !== invoiceId);
+      setAdminTransactions(updated);
+      localStorage.setItem('goisiin_transactions', JSON.stringify(updated));
+    }
+  };
 
   // Load chats from localStorage
   useEffect(() => {
@@ -228,12 +266,24 @@ export default function AdminDashboard({ products, onUpdateProducts, onNavigate,
         </div>
 
         {/* Tab Buttons */}
-        <div className="d-flex gap-2 mb-3">
+        <div className="d-flex gap-2 mb-3 flex-wrap">
           <button 
             className={`btn btn-sm ${activeTab === 'products' ? 'btn-success' : 'btn-outline-success'}`}
             onClick={() => setActiveTab('products')}
           >
             📦 Kelola Produk
+          </button>
+          <button 
+            className={`btn btn-sm ${activeTab === 'transactions' ? 'btn-success' : 'btn-outline-success'}`}
+            onClick={() => setActiveTab('transactions')}
+          >
+            📊 Transaksi Customer
+          </button>
+          <button 
+            className={`btn btn-sm ${activeTab === 'users' ? 'btn-success' : 'btn-outline-success'}`}
+            onClick={() => setActiveTab('users')}
+          >
+            👤 Akun Pengguna
           </button>
           <button 
             className={`btn btn-sm ${activeTab === 'chats' ? 'btn-success' : 'btn-outline-success'} position-relative`}
@@ -526,6 +576,131 @@ export default function AdminDashboard({ products, onUpdateProducts, onNavigate,
                   </button>
                 </form>
               </div>
+            </div>
+          </div>
+        )}
+        {/* TAB 3: TRANSAKSI CUSTOMER */}
+        {activeTab === 'transactions' && (
+          <div className="order-card p-3">
+            <h5 className="text-success fw-bold mb-3">Daftar Transaksi Customer</h5>
+            <div className="table-responsive">
+              <table className="table table-dark table-striped table-hover align-middle" style={{ fontSize: '0.85rem' }}>
+                <thead>
+                  <tr>
+                    <th>Invoice ID</th>
+                    <th>Email Pembeli</th>
+                    <th>Produk / Nominal</th>
+                    <th>ID Game / Nick</th>
+                    <th>Total</th>
+                    <th>Tanggal</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="text-center py-4 text-secondary">Belum ada transaksi masuk.</td>
+                    </tr>
+                  ) : (
+                    adminTransactions.map(t => (
+                      <tr key={t.invoiceId}>
+                        <td className="fw-semibold">#{t.invoiceId}</td>
+                        <td>{t.userEmail || <span className="text-secondary">Guest (No Login)</span>}</td>
+                        <td>
+                          <div className="d-flex align-items-center gap-2">
+                            <img src={t.productImage} alt={t.productName} width="24" height="24" className="rounded" />
+                            <div>
+                              <strong>{t.productName}</strong>
+                              <div className="text-secondary" style={{ fontSize: '0.75rem' }}>{t.denomination}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div>{t.userId}</div>
+                          <div className="text-success" style={{ fontSize: '0.75rem' }}>{t.nick}</div>
+                        </td>
+                        <td className="fw-bold text-success">{formatRupiah(t.total)}</td>
+                        <td>{t.createdAt}</td>
+                        <td>
+                          <span className={`badge ${
+                            t.status === 'success' ? 'bg-success' : 
+                            t.status === 'failed' ? 'bg-danger' : 'bg-warning text-dark'
+                          }`}>
+                            {t.status === 'success' ? 'Berhasil' : 
+                             t.status === 'failed' ? 'Gagal' : 'Menunggu'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="d-flex gap-1">
+                            <select
+                              className="form-select form-select-sm order-input py-0"
+                              style={{ width: '110px', fontSize: '0.78rem', height: '28px' }}
+                              value={t.status}
+                              onChange={(e) => handleUpdateTxStatus(t.invoiceId, e.target.value)}
+                            >
+                              <option value="pending">Menunggu</option>
+                              <option value="success">Berhasil</option>
+                              <option value="failed">Gagal</option>
+                            </select>
+                            <button 
+                              className="btn btn-outline-danger btn-sm py-0 px-2"
+                              style={{ height: '28px' }}
+                              onClick={() => handleDeleteTx(t.invoiceId)}
+                              title="Hapus"
+                            >
+                              <i className="bi bi-trash-fill"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: AKUN PENGGUNA */}
+        {activeTab === 'users' && (
+          <div className="order-card p-3">
+            <h5 className="text-success fw-bold mb-3">Daftar Akun Pengguna Terdaftar</h5>
+            <div className="table-responsive">
+              <table className="table table-dark table-striped table-hover align-middle" style={{ fontSize: '0.85rem' }}>
+                <thead>
+                  <tr>
+                    <th>Avatar</th>
+                    <th>Nama Lengkap</th>
+                    <th>Email Pengguna</th>
+                    <th>Tanggal Terdaftar / Login Terakhir</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="text-center py-4 text-secondary">Belum ada pengguna terdaftar.</td>
+                    </tr>
+                  ) : (
+                    adminUsers.map((u, i) => (
+                      <tr key={i}>
+                        <td>
+                          <img 
+                            src={u.picture || "https://lh3.googleusercontent.com/a/default-user=s100"} 
+                            alt="Avatar" 
+                            width="32" 
+                            height="32" 
+                            className="rounded-circle" 
+                          />
+                        </td>
+                        <td className="fw-semibold text-white">{u.name}</td>
+                        <td>{u.email}</td>
+                        <td>{u.lastLogin || 'N/A'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

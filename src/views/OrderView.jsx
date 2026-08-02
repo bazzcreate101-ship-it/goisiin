@@ -1,9 +1,9 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { products, paymentChannels } from '../data/products';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
-export default function OrderView({ productId, onNavigate }) {
+export default function OrderView({ productId, onNavigate, user }) {
   const product = products.find(p => p.id === productId);
 
   const [formData, setFormData] = useState({});
@@ -84,8 +84,17 @@ export default function OrderView({ productId, onNavigate }) {
         subtotal: selectedDenom.price,
         fee: calcFee(),
         total: calcTotal(),
-        createdAt: new Date().toLocaleString('id-ID')
+        createdAt: new Date().toLocaleString('id-ID'),
+        status: 'pending',
+        userEmail: user?.email || null
       };
+
+      // Simpan transaksi ke localStorage
+      const saved = localStorage.getItem('goisiin_transactions');
+      const list = saved ? JSON.parse(saved) : [];
+      list.unshift(invoiceData);
+      localStorage.setItem('goisiin_transactions', JSON.stringify(list));
+
       setIsSubmitting(false);
       onNavigate('invoice', invoiceData);
     }, 1200);

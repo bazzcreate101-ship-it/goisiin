@@ -6,6 +6,7 @@ import Footer from './components/Footer';
 import HomeView from './views/HomeView';
 import OrderView from './views/OrderView';
 import InvoiceView from './views/InvoiceView';
+import TransactionsView from './views/TransactionsView';
 import AdminLogin from './views/AdminLogin';
 import AdminDashboard from './views/AdminDashboard';
 import ChatWidget from './components/ChatWidget';
@@ -80,11 +81,30 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Sync users in localStorage whenever user logs in
+  useEffect(() => {
+    if (user?.email) {
+      const savedUsers = localStorage.getItem('goisiin_users');
+      let userList = savedUsers ? JSON.parse(savedUsers) : [];
+      if (!userList.some(u => u.email === user.email)) {
+        userList.push({
+          name: user.name,
+          email: user.email,
+          picture: user.picture,
+          lastLogin: new Date().toLocaleString('id-ID')
+        });
+        localStorage.setItem('goisiin_users', JSON.stringify(userList));
+      }
+    }
+  }, [user]);
+
   // Listen URL changes
   useEffect(() => {
     const checkUrl = () => {
       if (isAdminUrl()) {
         setCurrentView('admin');
+      } else if (window.location.hash === '#/transactions') {
+        setCurrentView('transactions');
       }
     };
     checkUrl();
@@ -131,6 +151,9 @@ function App() {
       setCurrentView('invoice');
       setInvoiceData(data);
       window.location.hash = `#/invoice/${data.invoiceId}`;
+    } else if (view === 'transactions') {
+      setCurrentView('transactions');
+      window.location.hash = '#/transactions';
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -192,11 +215,18 @@ function App() {
             productId={activeProductId}
             products={products}
             onNavigate={handleNavigate}
+            user={user}
           />
         )}
         {currentView === 'invoice' && (
           <InvoiceView
             invoiceData={invoiceData}
+            onNavigate={handleNavigate}
+          />
+        )}
+        {currentView === 'transactions' && (
+          <TransactionsView
+            user={user}
             onNavigate={handleNavigate}
           />
         )}

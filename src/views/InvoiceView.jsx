@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
@@ -6,6 +6,21 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes in seconds
   const [paymentStatus, setPaymentStatus] = useState('pending'); // 'pending' | 'checking' | 'success' | 'failed'
 
+  // Sync status on mount/update
+  useEffect(() => {
+    if (invoiceData?.invoiceId) {
+      const saved = localStorage.getItem('goisiin_transactions');
+      if (saved) {
+        const list = JSON.parse(saved);
+        const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
+        if (found) {
+          setPaymentStatus(found.status);
+        }
+      }
+    }
+  }, [invoiceData]);
+
+  // Countdown timer logic
   useEffect(() => {
     if (paymentStatus !== 'pending') return;
     const timer = setInterval(() => {
@@ -13,13 +28,26 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
         if (prev <= 1) {
           clearInterval(timer);
           setPaymentStatus('failed');
+
+          // Update status in localStorage
+          const saved = localStorage.getItem('goisiin_transactions');
+          if (saved) {
+            const list = JSON.parse(saved);
+            const updated = list.map(t => {
+              if (t.invoiceId === invoiceData?.invoiceId) {
+                return { ...t, status: 'failed' };
+              }
+              return t;
+            });
+            localStorage.setItem('goisiin_transactions', JSON.stringify(updated));
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [paymentStatus]);
+  }, [paymentStatus, invoiceData]);
 
   if (!invoiceData) {
     return (
@@ -39,8 +67,21 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
   const handleCheckStatus = () => {
     setPaymentStatus('checking');
     setTimeout(() => {
-      // Simulate success 80% of the time
-      setPaymentStatus(Math.random() < 0.8 ? 'success' : 'failed');
+      const nextStatus = Math.random() < 0.8 ? 'success' : 'failed';
+      setPaymentStatus(nextStatus);
+
+      // Update status in localStorage
+      const saved = localStorage.getItem('goisiin_transactions');
+      if (saved) {
+        const list = JSON.parse(saved);
+        const updated = list.map(t => {
+          if (t.invoiceId === invoiceData.invoiceId) {
+            return { ...t, status: nextStatus };
+          }
+          return t;
+        });
+        localStorage.setItem('goisiin_transactions', JSON.stringify(updated));
+      }
     }, 2500);
   };
 

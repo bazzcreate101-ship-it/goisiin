@@ -1,4 +1,4 @@
-﻿/* --- Root Colors and Fonts --- */
+/* --- Root Colors and Fonts --- */
 :root {
   --first-color: #6aaa4a;
   --glass-bg: rgba(31, 41, 55, 0.94);
@@ -2815,6 +2815,190 @@ footer a:hover {
     bottom: 84px;
   }
 }
+
+/* ==========================================
+   PROFILE DROPDOWN (GLASS DROPDOWN) SYSTEM
+   ========================================== */
+.dd-anchor {
+  position: relative;
+  isolation: isolate;
+}
+
+.profile_img {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.profile_img:hover {
+  transform: scale(1.05);
+}
+
+.dropdown-menu.glass-dd {
+  background: rgba(31, 41, 55, 0.96);
+  backdrop-filter: saturate(160%) blur(12px);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 1rem;
+  width: 340px !important;
+  max-width: calc(100vw - 24px);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+  transform-origin: top right;
+  margin-top: 0.5rem;
+  z-index: 1070;
+  color: #f3f4f6;
+  right: 0;
+  left: auto;
+}
+
+.dd-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 0.75rem;
+}
+
+.dd-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+}
+
+.dd-userblock {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dd-email {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dd-inner {
+  padding: 0;
+}
+
+.wallet-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .wallet-tiles {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wallet-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #e5e7eb;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
+  min-height: 60px;
+}
+
+.wallet-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wallet-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.tile-coin .wallet-icon {
+  background: rgba(251, 191, 36, 0.16);
+  border-color: rgba(251, 191, 36, 0.28);
+}
+
+.tile-gp .wallet-icon {
+  background: rgba(99, 102, 241, 0.16);
+  border-color: rgba(99, 102, 241, 0.28);
+}
+
+.wallet-meta {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.wallet-title {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  margin-bottom: 2px;
+}
+
+.wallet-value {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.dd-actions .dd-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dd-actions .dd-item > a {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  color: #e5e7eb;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.dd-actions .dd-item > a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.dd-actions .dd-item.logout > a {
+  color: #fecaca;
+}
+
+.dd-actions .dd-item.logout > a:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
 
 
 

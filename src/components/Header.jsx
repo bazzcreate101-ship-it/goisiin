@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 export default function Header({ 
   currentView, 
@@ -13,6 +13,18 @@ export default function Header({
   const userProfile = user;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Click outside dropdown logic
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleNavClick = (view, e) => {
     e.preventDefault();
@@ -45,12 +57,30 @@ export default function Header({
                 </a>
               </li>
               <li className="nav-item">
-                <a href="#" onClick={(e) => { e.preventDefault(); onOpenLogin(); }} className="nav-link">
+                <a 
+                  href="#" 
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    if (isLoggedIn) {
+                      handleNavClick('transactions', e);
+                    } else {
+                      onOpenLogin();
+                    }
+                  }} 
+                  className={`nav-link ${currentView === 'transactions' ? 'active-link' : ''}`}
+                >
                   <i className="bx bx-history nav__icon"></i><span>Transaksi</span>
                 </a>
               </li>
               <li className="nav-item">
-                <a href="#" onClick={(e) => { e.preventDefault(); onOpenLogin(); }} className="nav-link">
+                <a 
+                  href="#" 
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    alert("Promo spesial Goisiin akan segera hadir!");
+                  }} 
+                  className="nav-link"
+                >
                   <i className="bx bx-notepad nav__icon"></i><span>Promo</span>
                 </a>
               </li>
@@ -77,7 +107,7 @@ export default function Header({
 
             {/* Profile or Login */}
             {isLoggedIn ? (
-              <div className="dropdown dd-anchor">
+              <div className="dropdown dd-anchor" ref={dropdownRef}>
                 <button 
                   className="btn btn-sm p-0 border-0 d-flex align-items-center" 
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
@@ -101,7 +131,7 @@ export default function Header({
                       />
                       <div className="dd-userblock">
                         <span className="dd-email fw-bold">{userProfile?.name}</span>
-                        <span className="small text-secondary">{userProfile?.email}</span>
+                        <span className="small text-secondary" style={{ fontSize: '0.78rem' }}>{userProfile?.email}</span>
                       </div>
                     </div>
                     
@@ -126,12 +156,12 @@ export default function Header({
                       <div className="dd-actions mt-3">
                         <ul className="dd-list">
                           <li className="dd-item">
-                            <a href="#" onClick={(e) => { e.preventDefault(); alert("Fitur Dompet sedang dipersiapkan!"); }}>
+                            <a href="#" onClick={(e) => { e.preventDefault(); alert("Fitur Dompet sedang dipersiapkan!"); setProfileDropdownOpen(false); }}>
                               <i className="bx bx-wallet me-2"></i> Dompet Saya
                             </a>
                           </li>
                           <li className="dd-item">
-                            <a href="#" onClick={(e) => { e.preventDefault(); alert("Fitur Voucher saya!"); }}>
+                            <a href="#" onClick={(e) => { e.preventDefault(); alert("Fitur Voucher saya!"); setProfileDropdownOpen(false); }}>
                               <i className="bx bx-coupon me-2"></i> Voucher Saya
                             </a>
                           </li>
