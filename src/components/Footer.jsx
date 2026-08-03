@@ -1,7 +1,7 @@
 import React from 'react';
 
 const paymentLogoList = [
-  ['Saldo Goisiin', '/gassets/payment/goisiin-balance.svg'],
+  ['Saldo Goisiinn', '/gassets/payment/goisiin-balance.svg'],
   ['Alfamart', '/gassets/payment/ref/alfamart.png'],
   ['AstraPay', '/gassets/payment/ref/astrapay.png'],
   ['BCA', '/gassets/payment/ref/bca.png'],
@@ -28,7 +28,7 @@ export default function Footer({ onNavigate }) {
         <div className="row">
           
           <div className="col-md-3 col-12 text-start" style={{ marginTop: '20px' }}>
-            <h3 className="title-footer">GOISIIN</h3>
+            <h3 className="title-footer">GOISIINN</h3>
             <p className="faq-body">
               Platform Voucher Game dan Topup Game <b>Free Fire, Mobile Legends, Garena Shell, Steam Wallet</b> dan masih banyak lainnya dengan pembayaran yang sangat lengkap <b>QRIS dan E-Wallet</b> didukung oleh Customer Service 24 Jam.
             </p>
@@ -86,7 +86,7 @@ export default function Footer({ onNavigate }) {
         </div>
 
         <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} Goisiin. Seluruh hak cipta dilindungi undang-undang.</p>
+          <p>© {new Date().getFullYear()} Goisiinn. Seluruh hak cipta dilindungi undang-undang.</p>
         </div>
       </div>
     </footer>

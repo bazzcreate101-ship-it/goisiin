@@ -7,7 +7,7 @@ export function createInitialChatMessage() {
     id: 'init-1',
     sender: 'cs',
     agent: 'Vindy',
-    text: 'Halo Kak! Selamat datang di Goisiin. Vindy siap bantu soal produk, harga, pembayaran, promo, transaksi, dan bantuan CS.',
+    text: 'Halo Kak! Selamat datang di Goisiinn. Vindy siap bantu soal produk, harga, pembayaran, promo, transaksi, dan bantuan CS.',
     timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
   };
 }

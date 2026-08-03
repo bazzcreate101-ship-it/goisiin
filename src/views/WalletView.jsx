@@ -63,11 +63,11 @@ export default function WalletView({ user, onNavigate }) {
     const invoiceData = {
       invoiceId,
       productId: 'goisiin-wallet',
-      productName: 'Top Up Saldo Goisiin',
+      productName: 'Top Up Saldo Goisiinn',
       productImage: paymentImages.goisiinBalance,
       denomination: `Saldo ${formatRupiah(amount)}`,
       userId: userEmail,
-      nick: user?.name || 'Member Goisiin',
+      nick: user?.name || 'Member Goisiinn',
       paymentId: 'qris',
       paymentCategory: 'QRIS',
       paymentMethod: 'QRIS',
@@ -99,7 +99,7 @@ export default function WalletView({ user, onNavigate }) {
     if (!result.ok) {
       const copy = {
         minimum_withdrawal: `Minimal tarik saldo adalah ${formatRupiah(WALLET_WITHDRAW_MIN)}.`,
-        insufficient_balance: 'Saldo Goisiin tidak cukup untuk nominal penarikan ini.',
+        insufficient_balance: 'Saldo Goisiinn tidak cukup untuk nominal penarikan ini.',
         destination_required: 'Lengkapi provider, nama penerima, dan nomor rekening/e-wallet.',
       };
       reload(copy[result.reason] || 'Pengajuan tarik saldo gagal diproses.');
@@ -125,15 +125,15 @@ export default function WalletView({ user, onNavigate }) {
 
         <section className="wallet-page-hero">
           <div>
-            <span className="stamp-eyebrow">Dompet Goisiin</span>
+            <span className="stamp-eyebrow">Dompet Goisiinn</span>
             <h1>Dompet Saya</h1>
             <p>
-              Saldo Goisiin bisa dipakai untuk checkout, refund transaksi gagal yang sudah terdebit,
+              Saldo Goisiinn bisa dipakai untuk checkout, refund transaksi gagal yang sudah terdebit,
               top up via QRIS, dan ditarik ke e-wallet/bank.
             </p>
           </div>
           <div className="wallet-balance-card">
-            <span>Saldo Goisiin</span>
+            <span>Saldo Goisiinn</span>
             <strong>{formatRupiah(walletBalance)}</strong>
             <small>Minimal top up {formatRupiah(WALLET_TOPUP_MIN)} · tarik min {formatRupiah(WALLET_WITHDRAW_MIN)}</small>
           </div>

@@ -101,7 +101,7 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
       if (selectedPayment.id === 'goisiin_balance') {
         const total = calcTotal();
         if (walletBalance < total) {
-          setPaymentNotice(`Saldo Goisiin tidak cukup. Saldo kamu ${formatRupiah(walletBalance)}, total pesanan ${formatRupiah(total)}.`);
+          setPaymentNotice(`Saldo Goisiinn tidak cukup. Saldo kamu ${formatRupiah(walletBalance)}, total pesanan ${formatRupiah(total)}.`);
           return;
         }
       } else {
@@ -150,7 +150,7 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
         const debitResult = debitWalletForPurchase(invoiceData);
         if (!debitResult.ok) {
           setIsSubmitting(false);
-          setPaymentNotice('Saldo Goisiin tidak cukup atau sedang tidak bisa dipakai. Coba top up saldo dulu.');
+          setPaymentNotice('Saldo Goisiinn tidak cukup atau sedang tidak bisa dipakai. Coba top up saldo dulu.');
           return;
         }
         awardStampForTransaction(invoiceData, 'wallet-payment');
@@ -310,7 +310,7 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
                 {user?.email && (
                   <div className="wallet-payment-hint mb-2">
                     <i className="bi bi-wallet2"></i>
-                    Saldo Goisiin kamu: <strong>{formatRupiah(walletBalance)}</strong>
+                    Saldo Goisiinn kamu: <strong>{formatRupiah(walletBalance)}</strong>
                   </div>
                 )}
 

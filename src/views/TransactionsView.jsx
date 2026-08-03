@@ -46,7 +46,7 @@ export default function TransactionsView({ user, onNavigate }) {
                 📜 Riwayat Transaksi Kamu
               </h3>
               <p className="text-secondary mb-0" style={{ fontSize: '0.86rem' }}>
-                Berikut daftar top up game yang pernah kamu lakukan di Goisiin.
+                Berikut daftar top up game yang pernah kamu lakukan di Goisiinn.
               </p>
             </div>
             <button className="btn btn-outline-success btn-sm" onClick={() => onNavigate('home', null)}>

@@ -117,7 +117,7 @@ export function settleWalletEffectsForTransaction(transaction, actor = 'system')
       kind: 'topup_credit',
       delta: creditAmount,
       invoiceId,
-      note: `Top up saldo Goisiin ${invoiceId}`,
+      note: `Top up saldo Goisiinn ${invoiceId}`,
       metadata: { actor },
     });
   }

@@ -51,7 +51,7 @@ export default function LoginModal({ isOpen, onClose }) {
             <section className="auth-modal__intro" aria-labelledby="modalTitle">
               <div>
                 <span className="auth-modal__eyebrow">Selamat datang</span>
-                <h2 className="auth-modal__title" id="modalTitle">Masuk ke Goisiin</h2>
+                <h2 className="auth-modal__title" id="modalTitle">Masuk ke Goisiinn</h2>
                 <p className="auth-modal__subtitle">Pantau transaksi, kumpulkan hadiah, dan dapatkan bantuan lebih cepat.</p>
               </div>
               <ul className="auth-modal__perks">
@@ -80,7 +80,7 @@ export default function LoginModal({ isOpen, onClose }) {
             <section className="auth-modal__cta" aria-label="Mulai login">
               <div className="auth-modal__cta-header">
                 <h3 className="auth-modal__cta-title">Login lebih cepat</h3>
-                <p className="auth-modal__cta-desc">Gunakan akun Google untuk pengalaman transaksi lebih nyaman di Goisiin.</p>
+                <p className="auth-modal__cta-desc">Gunakan akun Google untuk pengalaman transaksi lebih nyaman di Goisiinn.</p>
               </div>
 
               <div className="auth-modal__google">
@@ -125,7 +125,7 @@ export default function LoginModal({ isOpen, onClose }) {
               </div>
 
               <p className="auth-modal__terms">
-                Dengan masuk ke Goisiin, kamu menyetujui{' '}
+                Dengan masuk ke Goisiinn, kamu menyetujui{' '}
                 <a href="#/page/terms">Syarat dan Ketentuan</a>{' '}
                 serta{' '}
                 <a href="#/page/privacy">Kebijakan Privasi</a>.

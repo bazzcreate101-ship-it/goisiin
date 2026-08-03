@@ -52,7 +52,7 @@ const statusCopy = {
   claimed: {
     label: 'Klaim dikirim',
     title: 'Form klaim sudah diterima',
-    description: 'Tim Goisiin sedang memproses pengiriman hadiah atau saldo ke data klaim yang kamu isi.',
+    description: 'Tim Goisiinn sedang memproses pengiriman hadiah atau saldo ke data klaim yang kamu isi.',
     step: 4,
   },
   fulfilled: {
@@ -64,7 +64,7 @@ const statusCopy = {
   rejected: {
     label: 'Perlu cek admin',
     title: 'Klaim perlu ditinjau ulang',
-    description: 'Hubungi admin Goisiin untuk konfirmasi data klaim atau status penukaran.',
+    description: 'Hubungi admin Goisiinn untuk konfirmasi data klaim atau status penukaran.',
     step: 4,
   },
 };
@@ -129,7 +129,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
           <section className="stamp-guest-card">
             <div>
               <span className="stamp-eyebrow">Promo Stamp Berhadiah</span>
-              <h1>Kumpulkan 6 stamp unik dan tukarkan hadiah Goisiin.</h1>
+              <h1>Kumpulkan 6 stamp unik dan tukarkan hadiah Goisiinn.</h1>
               <p>
                 Login dulu untuk melihat progress stamp, membuat kode redeem, dan klaim hadiah.
               </p>
@@ -137,7 +137,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                 Login untuk mulai
               </button>
             </div>
-            <img src={stampPosterImage} alt="Promo Stamp Berhadiah Goisiin" />
+            <img src={stampPosterImage} alt="Promo Stamp Berhadiah Goisiinn" />
           </section>
         </div>
       </div>
@@ -243,7 +243,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
             </div>
           </div>
           <div className="stamp-hero__poster">
-            <img src={stampPosterImage} alt="Promo Stamp Berhadiah Goisiin" />
+            <img src={stampPosterImage} alt="Promo Stamp Berhadiah Goisiinn" />
           </div>
         </section>
 

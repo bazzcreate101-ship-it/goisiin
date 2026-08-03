@@ -83,7 +83,7 @@ export default function AdminLogin({ onLogin }) {
             fontWeight: 700,
             margin: 0,
             letterSpacing: '-0.02em'
-          }}>Admin Goisiin</h1>
+          }}>Admin Goisiinn</h1>
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', margin: '4px 0 0' }}>
             Masuk ke panel kontrol
           </p>
@@ -199,7 +199,7 @@ export default function AdminLogin({ onLogin }) {
         </form>
 
         <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem', marginTop: '24px', marginBottom: 0 }}>
-          Akses terbatas untuk tim Goisiin
+          Akses terbatas untuk tim Goisiinn
         </p>
       </div>
     </div>

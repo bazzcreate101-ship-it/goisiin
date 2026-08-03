@@ -333,7 +333,7 @@ export const paymentChannels = [
   {
     id: 'goisiin_balance',
     category: 'Saldo',
-    name: 'Saldo Goisiin',
+    name: 'Saldo Goisiinn',
     image: paymentImages.goisiinBalance,
     feePercent: 0,
     feeFlat: 0

@@ -118,7 +118,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const requestUrl = new URL(req.url || '/api/cloud-state', `https://${req.headers.host || 'goisiin.com'}`);
+      const requestUrl = new URL(req.url || '/api/cloud-state', `https://${req.headers.host || 'goisiinn.com'}`);
       const rawKeys = String(req.query?.keys || requestUrl.searchParams.get('keys') || '')
         .split(',')
         .map(sanitizeKey)

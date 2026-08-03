@@ -16,7 +16,7 @@ function isConfigured() {
 function normalizeAuthUser(user) {
   const metadata = user?.user_metadata || {};
   return {
-    name: cleanText(metadata.full_name || metadata.name || user.email || 'User Goisiin', 120),
+    name: cleanText(metadata.full_name || metadata.name || user.email || 'User Goisiinn', 120),
     email: cleanText(user.email, 160),
     picture: cleanText(metadata.avatar_url || metadata.picture || '', 500),
     registeredAt: cleanText(user.created_at, 80),

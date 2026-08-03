@@ -136,10 +136,10 @@ export default function ChatWidget({ products, user, transactions }) {
       withdrawalMin: 100000,
       withdrawalFeePercent: 0.7,
       rules: [
-        'Saldo Goisiin bisa dipakai untuk checkout jika saldo cukup.',
+        'Saldo Goisiinn bisa dipakai untuk checkout jika saldo cukup.',
         'Jika saldo tidak cukup, user harus top up saldo atau pilih metode pembayaran lain.',
-        'Top up saldo Goisiin hanya melalui QRIS, minimal Rp50.000 dan maksimal Rp5.000.000.',
-        'Transaksi gagal yang sudah mendebit dana akan refund otomatis ke Saldo Goisiin.',
+        'Top up saldo Goisiinn hanya melalui QRIS, minimal Rp50.000 dan maksimal Rp5.000.000.',
+        'Transaksi gagal yang sudah mendebit dana akan refund otomatis ke Saldo Goisiinn.',
         'Tarik saldo bisa ke e-wallet atau bank, minimal Rp100.000, fee 0,7%.',
       ],
       entries: walletEntries,
@@ -167,7 +167,7 @@ export default function ChatWidget({ products, user, transactions }) {
     });
   };
 
-  const handoffToAdmin = (baseMessages, text = 'Chat dialihkan ke Admin CS Goisiin. Kakak sedang terhubung dengan antrean admin.') => {
+  const handoffToAdmin = (baseMessages, text = 'Chat dialihkan ke Admin CS Goisiinn. Kakak sedang terhubung dengan antrean admin.') => {
     const sysMsg = {
       id: `sys-${Date.now()}`,
       sender: 'system',
@@ -208,7 +208,7 @@ export default function ChatWidget({ products, user, transactions }) {
         setIsTyping(true);
         setTimeout(() => {
           setIsTyping(false);
-          handoffToAdmin(updatedMsgs, 'Menghubungkan ke Tim CS Goisiin. Silakan tunggu.');
+          handoffToAdmin(updatedMsgs, 'Menghubungkan ke Tim CS Goisiinn. Silakan tunggu.');
         }, 900);
       }
       return;
@@ -236,7 +236,7 @@ export default function ChatWidget({ products, user, transactions }) {
         id: `msg-${Date.now()}`,
         sender: 'cs',
         agent: 'Vindy',
-        text: data.reply || 'Ada yang bisa Vindy bantu lagi seputar Goisiin, Kak?',
+        text: data.reply || 'Ada yang bisa Vindy bantu lagi seputar Goisiinn, Kak?',
         timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
       };
       const nextMsgs = [...updatedMsgs, csMsg];
@@ -251,7 +251,7 @@ export default function ChatWidget({ products, user, transactions }) {
         id: `msg-${Date.now()}`,
         sender: 'cs',
         agent: 'Vindy',
-        text: err.message || 'Maaf Kak, jaringan Vindy sedang terganggu. Coba lagi sebentar atau hubungi admin Goisiin.',
+        text: err.message || 'Maaf Kak, jaringan Vindy sedang terganggu. Coba lagi sebentar atau hubungi admin Goisiinn.',
         timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
       };
       saveState([...updatedMsgs, errorMsg]);
@@ -287,7 +287,7 @@ export default function ChatWidget({ products, user, transactions }) {
                 <div className="chat-agent-name">
                   {adminMode
                     ? (activeAdmin ? `Admin ${activeAdmin}` : 'Menghubungkan ke Admin...')
-                    : 'Vindy - CS Goisiin'}
+                    : 'Vindy - CS Goisiinn'}
                 </div>
                 <div className="chat-agent-sub">
                   {adminMode ? 'Admin Live Support' : 'AI Customer Assistant'}
@@ -341,7 +341,7 @@ export default function ChatWidget({ products, user, transactions }) {
             <input
               type="text"
               maxLength={MAX_MESSAGE_LENGTH}
-              placeholder="Tulis pesan seputar Goisiin..."
+              placeholder="Tulis pesan seputar Goisiinn..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="chat-input-field"

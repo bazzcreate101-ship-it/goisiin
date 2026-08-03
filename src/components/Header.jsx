@@ -48,7 +48,7 @@ export default function Header({
           
           {/* BRAND */}
           <a href="#" onClick={(e) => handleNavClick('home', e)} className="navbar-brand flex-shrink-1 d-flex align-items-center" style={{ textDecoration: 'none' }}>
-            <img src={logo} alt="Goisiin" className="img-logo" onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }} />
+            <img src={logo} alt="Goisiinn" className="img-logo" onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }} />
           </a>
 
           {/* MENU UTAMA */}
@@ -139,9 +139,9 @@ export default function Header({
                         onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }}
                       />
                       <div className="dd-userblock">
-                        <span className="dd-email fw-bold">{userProfile?.name || 'Member Goisiin'}</span>
+                        <span className="dd-email fw-bold">{userProfile?.name || 'Member Goisiinn'}</span>
                         <span className="small text-secondary" style={{ fontSize: '0.78rem' }}>{userProfile?.email}</span>
-                        <span className="dd-member-badge">Member Goisiin</span>
+                        <span className="dd-member-badge">Member Goisiinn</span>
                       </div>
                     </div>
                     

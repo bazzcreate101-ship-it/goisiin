@@ -333,7 +333,7 @@ export function getDefaultVoucherCodes() {
   const seeded = Array.from({ length: 20 }, (_, index) => ({
     id: makeId('voucher'),
     prizeId: 'google-play-100k',
-    code: `GP-GOISIIN-${String(index + 1).padStart(3, '0')}`,
+    code: `GP-GOISIINN-${String(index + 1).padStart(3, '0')}`,
     status: 'unused',
   }));
   writeStorageList(VOUCHER_CODES_KEY, seeded);
@@ -367,7 +367,7 @@ export function assignPrizeToRedemption(redemptionId, prizeId, actor = 'admin') 
   redemption.assignedAt = nowText();
   redemption.assignedBy = actor;
   if (prize.type === 'voucher_code' && !redemption.voucherCode) {
-    redemption.voucherCode = assignVoucherCode(prize.id, redemption.id) || `GP-GOISIIN-${redemption.id.slice(-6).toUpperCase()}`;
+    redemption.voucherCode = assignVoucherCode(prize.id, redemption.id) || `GP-GOISIINN-${redemption.id.slice(-6).toUpperCase()}`;
   }
   saveStampRedemptions(redemptions);
   appendAudit('prize_assigned', actor, `${actor} memilih ${prize.name} untuk ${redemption.userEmail}`);

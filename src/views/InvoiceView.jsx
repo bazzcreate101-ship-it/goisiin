@@ -265,7 +265,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
                   <span className="invoice-label">Scan QRIS</span>
                   <div className="invoice-qris-frame">
                     {qrisDataUrl ? (
-                      <img src={qrisDataUrl} alt="QRIS pembayaran Goisiin" />
+                      <img src={qrisDataUrl} alt="QRIS pembayaran Goisiinn" />
                     ) : (
                       <div className="spinner-border text-success" role="status"></div>
                     )}

@@ -469,7 +469,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
           <div>
             <h2 className="text-white fw-bold mb-1" style={{ fontFamily: "'Oxanium', sans-serif" }}>
-              🛡️ Dashboard Admin Goisiin
+              🛡️ Dashboard Admin Goisiinn
             </h2>
             <p className="text-secondary mb-0" style={{ fontSize: '0.86rem' }}>
               Halo, <strong style={{ color: '#4ade80' }}>{adminUser?.name || 'Admin'}</strong> — Kelola produk & jawab chat customer.
@@ -1015,7 +1015,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
               </div>
             </div>
             <div className="order-card p-3 mt-3">
-              <h5 className="text-success fw-bold mb-3">Pengajuan Tarik Saldo Goisiin</h5>
+              <h5 className="text-success fw-bold mb-3">Pengajuan Tarik Saldo Goisiinn</h5>
               <div className="table-responsive">
                 <table className="table table-dark table-striped align-middle" style={{ fontSize: '0.82rem' }}>
                   <thead>
@@ -1088,7 +1088,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     <th>Avatar</th>
                     <th>Nama Lengkap</th>
                     <th>Email Pengguna</th>
-                    <th>Saldo Goisiin</th>
+                    <th>Saldo Goisiinn</th>
                     <th>Tanggal Terdaftar / Login Terakhir</th>
                   </tr>
                 </thead>
