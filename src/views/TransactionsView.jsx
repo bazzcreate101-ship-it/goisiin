@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { safeJsonParse } from '../lib/storage';
+import { readStorageList } from '../lib/storage';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
@@ -7,16 +7,22 @@ export default function TransactionsView({ user, onNavigate }) {
   const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('goisiin_transactions');
-    if (saved) {
-      const list = safeJsonParse(saved, []);
+    const loadTransactions = () => {
+      const list = readStorageList('goisiin_transactions');
       // Filter by current user email if logged in
       if (user?.email) {
         setTransactions(list.filter(t => t.userEmail === user.email));
       } else {
         setTransactions(list);
       }
-    }
+    };
+    loadTransactions();
+    window.addEventListener('storage', loadTransactions);
+    window.addEventListener('goisiin:cloud-state-updated', loadTransactions);
+    return () => {
+      window.removeEventListener('storage', loadTransactions);
+      window.removeEventListener('goisiin:cloud-state-updated', loadTransactions);
+    };
   }, [user]);
 
   return (

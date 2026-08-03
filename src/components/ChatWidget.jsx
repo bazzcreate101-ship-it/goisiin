@@ -4,6 +4,7 @@ import { STAMP_MIN_TRANSACTION, stampRewards, stampTypes } from '../data/stampRe
 import { promoInfo, siteMechanics, supportInfo } from '../data/siteInfo';
 import { safeJsonParse } from '../lib/storage';
 import { getWalletBalance, getWalletEntries, getWithdrawalRequests } from '../lib/walletService';
+import { writeCloudBackedValue } from '../lib/cloudState';
 
 const MAX_MESSAGE_LENGTH = 600;
 const CLIENT_COOLDOWN_MS = 1800;
@@ -36,7 +37,7 @@ export default function ChatWidget({ products, user, transactions }) {
         }
       ];
       setMessages(initial);
-      localStorage.setItem('goisiin_chat_messages', JSON.stringify(initial));
+      writeCloudBackedValue('goisiin_chat_messages', initial);
     }
 
     if (savedAdminMode) setAdminMode(Boolean(safeJsonParse(savedAdminMode, false)));
@@ -45,14 +46,16 @@ export default function ChatWidget({ products, user, transactions }) {
 
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'goisiin_chat_messages' && e.newValue) {
-        setMessages(safeJsonParse(e.newValue, []));
+      if (!e.key || e.key === 'goisiin_chat_messages') {
+        const savedMessages = localStorage.getItem('goisiin_chat_messages');
+        if (savedMessages) setMessages(safeJsonParse(savedMessages, []));
       }
-      if (e.key === 'goisiin_chat_admin_mode' && e.newValue) {
-        setAdminMode(Boolean(safeJsonParse(e.newValue, false)));
+      if (!e.key || e.key === 'goisiin_chat_admin_mode') {
+        const savedMode = localStorage.getItem('goisiin_chat_admin_mode');
+        if (savedMode) setAdminMode(Boolean(safeJsonParse(savedMode, false)));
       }
-      if (e.key === 'goisiin_chat_active_admin') {
-        setActiveAdmin(e.newValue || null);
+      if (!e.key || e.key === 'goisiin_chat_active_admin') {
+        setActiveAdmin(localStorage.getItem('goisiin_chat_active_admin') || null);
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -68,13 +71,9 @@ export default function ChatWidget({ products, user, transactions }) {
     setMessages(limitedMessages);
     setAdminMode(newAdminMode);
     setActiveAdmin(newAdmin);
-    localStorage.setItem('goisiin_chat_messages', JSON.stringify(limitedMessages));
-    localStorage.setItem('goisiin_chat_admin_mode', JSON.stringify(newAdminMode));
-    if (newAdmin) {
-      localStorage.setItem('goisiin_chat_active_admin', newAdmin);
-    } else {
-      localStorage.removeItem('goisiin_chat_active_admin');
-    }
+    writeCloudBackedValue('goisiin_chat_messages', limitedMessages);
+    writeCloudBackedValue('goisiin_chat_admin_mode', newAdminMode);
+    writeCloudBackedValue('goisiin_chat_active_admin', newAdmin || null);
   };
 
   const buildChatContext = () => {

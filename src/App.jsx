@@ -23,6 +23,7 @@ import {
   safeJsonParse,
 } from './lib/storage';
 import { autoRestockProducts } from './lib/productStock';
+import { hydrateCloudState, writeCloudBackedValue } from './lib/cloudState';
 
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
 
@@ -84,7 +85,7 @@ function App() {
     const normalizedProducts = normalizeStoredProducts(localStorage.getItem('goisiin_products'), initialProducts);
     const restocked = autoRestockProducts(normalizedProducts);
     if (restocked.changed > 0) {
-      localStorage.setItem('goisiin_products', JSON.stringify(restocked.products));
+      writeCloudBackedValue('goisiin_products', restocked.products);
     }
     return restocked.products;
   });
@@ -120,6 +121,19 @@ function App() {
   }, []);
 
   useEffect(() => {
+    hydrateCloudState().then((result) => {
+      if (result.ok && result.hydrated > 0) {
+        const normalizedProducts = normalizeStoredProducts(localStorage.getItem('goisiin_products'), initialProducts);
+        const restocked = autoRestockProducts(normalizedProducts);
+        setProducts(restocked.products);
+        if (restocked.changed > 0) {
+          writeCloudBackedValue('goisiin_products', restocked.products);
+        }
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     if (user?.email) {
       const userList = safeJsonParse(localStorage.getItem('goisiin_users'), []);
       if (!userList.some(u => u.email === user.email)) {
@@ -129,7 +143,7 @@ function App() {
           picture: user.picture,
           lastLogin: new Date().toLocaleString('id-ID')
         });
-        localStorage.setItem('goisiin_users', JSON.stringify(userList));
+        writeCloudBackedValue('goisiin_users', userList);
       }
     }
   }, [user]);
@@ -241,7 +255,7 @@ function App() {
   const handleUpdateProducts = (newProducts) => {
     const restocked = autoRestockProducts(newProducts);
     setProducts(restocked.products);
-    localStorage.setItem('goisiin_products', JSON.stringify(restocked.products));
+    writeCloudBackedValue('goisiin_products', restocked.products);
   };
 
   useEffect(() => {
@@ -249,7 +263,7 @@ function App() {
       setProducts((currentProducts) => {
         const restocked = autoRestockProducts(currentProducts);
         if (restocked.changed > 0) {
-          localStorage.setItem('goisiin_products', JSON.stringify(restocked.products));
+          writeCloudBackedValue('goisiin_products', restocked.products);
           return restocked.products;
         }
         return currentProducts;

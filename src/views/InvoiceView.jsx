@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
-import { safeJsonParse } from '../lib/storage';
+import { readStorageList, writeStorageList } from '../lib/storage';
 import { awardStampForTransaction } from '../lib/stampService';
 import { buildDynamicQrisPayload } from '../lib/qris';
 import { settleWalletEffectsForTransaction } from '../lib/walletService';
@@ -15,9 +15,8 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
   // Sync status on mount/update
   useEffect(() => {
     if (invoiceData?.invoiceId) {
-      const saved = localStorage.getItem('goisiin_transactions');
-      if (saved) {
-        const list = safeJsonParse(saved, []);
+      const list = readStorageList('goisiin_transactions');
+      if (list.length > 0) {
         const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
         if (found) {
           setPaymentStatus(found.status);
@@ -57,9 +56,8 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
           setPaymentStatus('failed');
 
           // Update status in localStorage
-          const saved = localStorage.getItem('goisiin_transactions');
-          if (saved) {
-            const list = safeJsonParse(saved, []);
+          const list = readStorageList('goisiin_transactions');
+          if (list.length > 0) {
             const updated = list.map(t => {
               if (t.invoiceId === invoiceData?.invoiceId) {
                 const failedTx = { ...t, status: 'failed' };
@@ -68,7 +66,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
               }
               return t;
             });
-            localStorage.setItem('goisiin_transactions', JSON.stringify(updated));
+            writeStorageList('goisiin_transactions', updated);
           }
           return 0;
         }
@@ -96,8 +94,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
   const handleCheckStatus = () => {
     setPaymentStatus('checking');
     setTimeout(() => {
-      const saved = localStorage.getItem('goisiin_transactions');
-      const list = safeJsonParse(saved, []);
+      const list = readStorageList('goisiin_transactions');
       const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
       const nextStatus = ['success', 'failed'].includes(found?.status) ? found.status : 'pending';
       setPaymentStatus(nextStatus);

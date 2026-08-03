@@ -1,3 +1,5 @@
+import { queueCloudStateWrite } from './cloudState';
+
 export function safeJsonParse(value, fallback) {
   try {
     return value ? JSON.parse(value) : fallback;
@@ -12,7 +14,9 @@ export function readStorageList(key) {
 }
 
 export function writeStorageList(key, value) {
-  localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value.slice(0, 500) : []));
+  const safeValue = Array.isArray(value) ? value.slice(0, 1000) : [];
+  localStorage.setItem(key, JSON.stringify(safeValue));
+  queueCloudStateWrite(key, safeValue);
 }
 
 export function readUserTransactions(user) {

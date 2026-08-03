@@ -25,6 +25,7 @@ import {
   hasManagedStock,
   restockLowStockProduct,
 } from '../lib/productStock';
+import { writeCloudBackedValue } from '../lib/cloudState';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -141,8 +142,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     setChatMessages(safeMessages);
     setAdminMode(mode);
     writeStorageList('goisiin_chat_messages', safeMessages);
-    localStorage.setItem('goisiin_chat_admin_mode', JSON.stringify(mode));
-    localStorage.setItem('goisiin_chat_active_admin', adminName);
+    writeCloudBackedValue('goisiin_chat_admin_mode', mode);
+    writeCloudBackedValue('goisiin_chat_active_admin', adminName);
     // Sync storage event
     window.dispatchEvent(new Event('storage'));
   };
@@ -700,7 +701,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     value={activeAdmin}
                     onChange={e => {
                       setActiveAdmin(e.target.value);
-                      localStorage.setItem('goisiin_chat_active_admin', e.target.value);
+                      writeCloudBackedValue('goisiin_chat_active_admin', e.target.value);
                     }}
                   >
                     <option value="Ardan">Ardan</option>
