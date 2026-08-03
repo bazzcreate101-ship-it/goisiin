@@ -11,6 +11,7 @@ import {
   getStampSummary,
   grantStampToUser,
   revokeStampFromUser,
+  updateRedemptionDates,
   updateRedemptionStatus,
 } from '../lib/stampService';
 import {
@@ -1227,7 +1228,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                         <th>User</th>
                         <th>Status</th>
                         <th>Hadiah</th>
-                        <th>Klaim</th>
+                        <th>Klaim & Tanggal</th>
                         <th>Aksi</th>
                       </tr>
                     </thead>
@@ -1270,6 +1271,27 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                                 {r.claimDetails.address || '-'}
                               </small>
                             ) : <span className="text-secondary">Belum isi</span>}
+                            <div className="admin-stamp-date-grid mt-2">
+                              {[
+                                ['createdAt', 'Dibuat'],
+                                ['assignedAt', 'Hadiah'],
+                                ['claimedAt', 'Klaim'],
+                                ['updatedAt', 'Update'],
+                              ].map(([field, label]) => (
+                                <label className="admin-stamp-date-field" key={field}>
+                                  <span>{label}</span>
+                                  <input
+                                    className="form-control form-control-sm order-input"
+                                    value={r[field] || ''}
+                                    placeholder="-"
+                                    onChange={(e) => {
+                                      updateRedemptionDates(r.id, { [field]: e.target.value }, adminActor);
+                                      reloadStampAdmin();
+                                    }}
+                                  />
+                                </label>
+                              ))}
+                            </div>
                           </td>
                           <td>
                             <select

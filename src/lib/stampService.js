@@ -419,6 +419,23 @@ export function updateRedemptionStatus(redemptionId, status, actor = 'admin') {
   return { ok: true, redemption };
 }
 
+export function updateRedemptionDates(redemptionId, dates = {}, actor = 'admin') {
+  const allowedFields = ['createdAt', 'assignedAt', 'claimedAt', 'updatedAt'];
+  const redemptions = getStampRedemptions();
+  const redemption = redemptions.find((item) => item.id === redemptionId);
+  if (!redemption) return { ok: false, reason: 'invalid_redemption' };
+
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(dates, field)) {
+      redemption[field] = cleanClaimText(dates[field], 80);
+    }
+  });
+  redemption.updatedBy = actor;
+  saveStampRedemptions(redemptions);
+  appendAudit('redemption_dates_updated', actor, `${actor} mengubah tanggal penukaran ${redemptionId}`);
+  return { ok: true, redemption };
+}
+
 export function getUserRedemptions(email) {
   const userEmail = normalizeEmail(email);
   return getStampRedemptions().filter((redemption) => normalizeEmail(redemption.userEmail) === userEmail);

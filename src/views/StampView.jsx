@@ -428,7 +428,13 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                     <div className="stamp-redemption-card__summary">
                       <span className={`stamp-status stamp-status--${redemption.status}`}>{copy.label}</span>
                       <h3>{copy.title}</h3>
-                      <p className="text-secondary mb-2">ID Penukaran: #{redemption.id.slice(-6).toUpperCase()}<br />Dibuat: {redemption.createdAt}</p>
+                      <p className="text-secondary mb-2">
+                        ID Penukaran: #{redemption.id.slice(-6).toUpperCase()}<br />
+                        Dibuat: {redemption.createdAt || '-'}<br />
+                        {redemption.assignedAt && <>Hadiah dipilih: {redemption.assignedAt}<br /></>}
+                        {redemption.claimedAt && <>Klaim masuk: {redemption.claimedAt}<br /></>}
+                        {redemption.updatedAt && <>Update terakhir: {redemption.updatedAt}</>}
+                      </p>
                       <div className="stamp-progress-steps" aria-label={`Tahap ${copy.step} dari 4`}>
                         {[1, 2, 3, 4].map((step) => (
                           <span className={step <= copy.step ? 'is-active' : ''} key={step}>{step}</span>

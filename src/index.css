@@ -3501,6 +3501,7 @@ footer a:hover {
 }
 
 .reward-card {
+  position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
@@ -3510,29 +3511,54 @@ footer a:hover {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
+.reward-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 38%);
+  opacity: 0.7;
+}
+
 .reward-card--main {
   border-color: rgba(234, 225, 96, 0.36);
   background: linear-gradient(145deg, rgba(106, 170, 74, 0.16), rgba(17, 24, 39, 0.78));
 }
 
 .reward-card__media {
+  position: relative;
   width: 100%;
   height: 178px;
   display: grid;
   place-items: center;
   padding: 0.9rem 0.95rem 0.4rem;
   background:
-    radial-gradient(circle at 50% 52%, rgba(214, 244, 133, 0.32), transparent 44%),
-    linear-gradient(145deg, rgba(238, 249, 210, 0.18), rgba(122, 151, 80, 0.08) 48%, rgba(7, 11, 17, 0.05));
+    radial-gradient(circle at 50% 52%, rgba(230, 255, 162, 0.42), transparent 42%),
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.18), transparent 30%),
+    linear-gradient(145deg, rgba(199, 222, 159, 0.30), rgba(79, 95, 61, 0.16) 52%, rgba(7, 11, 17, 0.08));
+}
+
+.reward-card__media::after {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 10%;
+  height: 18%;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.24), transparent 68%);
+  filter: blur(8px);
 }
 
 .reward-card__media img {
+  position: relative;
+  z-index: 1;
   width: min(82%, 230px);
   height: 100%;
   object-fit: contain;
   object-position: center;
-  mix-blend-mode: normal;
-  filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.28));
+  mix-blend-mode: multiply;
+  filter: contrast(1.04) saturate(1.02) drop-shadow(0 18px 22px rgba(0, 0, 0, 0.24));
 }
 
 .reward-card--main .reward-card__media img {
@@ -3541,6 +3567,8 @@ footer a:hover {
 
 .reward-card > div:not(.reward-card__media),
 .stamp-result > div:not(.reward-card__media) {
+  position: relative;
+  z-index: 1;
   padding: 0.8rem;
 }
 
@@ -3831,7 +3859,11 @@ footer a:hover {
   height: 86px;
   object-fit: contain;
   border-radius: 16px;
-  background: #eef4df;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(230, 255, 162, 0.42), transparent 62%),
+    #dfeac7;
+  mix-blend-mode: multiply;
+  filter: contrast(1.04) saturate(1.02) drop-shadow(0 12px 18px rgba(0, 0, 0, 0.24));
 }
 
 .stamp-result h3 {
@@ -3860,6 +3892,26 @@ footer a:hover {
   font-size: 0.84rem;
 }
 
+.admin-stamp-date-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 0.45rem;
+  min-width: 280px;
+}
+
+.admin-stamp-date-field {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.admin-stamp-date-field span {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 @media (max-width: 768px) {
   .stamp-home-card,
   .stamp-hero,
@@ -3881,16 +3933,33 @@ footer a:hover {
 
   .reward-card {
     border-radius: 14px;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(230, 255, 162, 0.13), transparent 38%),
+      linear-gradient(160deg, rgba(18, 27, 36, 0.94), rgba(12, 17, 27, 0.96));
   }
 
   .reward-card__media {
-    height: 128px;
-    padding: 0.62rem 0.55rem 0.25rem;
+    height: 138px;
+    padding: 0.7rem 0.6rem 0.28rem;
+    background:
+      radial-gradient(circle at 50% 54%, rgba(230, 255, 162, 0.48), transparent 40%),
+      linear-gradient(145deg, rgba(219, 240, 183, 0.32), rgba(85, 103, 66, 0.16));
   }
 
   .reward-card__media img,
   .reward-card--main .reward-card__media img {
-    width: min(88%, 150px);
+    width: min(92%, 158px);
+    max-height: 118px;
+  }
+
+  .reward-card h3 {
+    font-size: 0.84rem;
+    line-height: 1.18;
+  }
+
+  .reward-card p,
+  .reward-card small {
+    font-size: 0.7rem;
   }
 
   .reward-card > div:not(.reward-card__media),
