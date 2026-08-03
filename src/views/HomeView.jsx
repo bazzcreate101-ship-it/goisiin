@@ -39,7 +39,7 @@ export default function HomeView({ products, onSelectProduct, onNavigate }) {
           <Categories activeCategory={activeCategory} onSelectCategory={setActiveCategory} />
 
           {/* 2b. FLASH SALE */}
-          <FlashSale onSelectProduct={onSelectProduct} />
+          <FlashSale products={visibleProducts} onSelectProduct={onSelectProduct} />
 
           {/* 2c. PRODUCT GRID HEADER */}
           <div id="allContent" className="row pt-1">

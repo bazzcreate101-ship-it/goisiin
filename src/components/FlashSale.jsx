@@ -4,6 +4,7 @@ import { productImages } from '../assets/images';
 const flashSaleItems = [
   {
     productId: 'higgs-game-island',
+    denominationId: 'higgs-1b',
     name: 'Higgs Game Island',
     meta: 'Tukar Kartu (1B)',
     image: productImages['higgs-game-island'],
@@ -12,6 +13,7 @@ const flashSaleItems = [
   },
   {
     productId: 'higgs-game-island',
+    denominationId: 'higgs-2b',
     name: 'Higgs Game Island',
     meta: 'Tukar Kartu (2B)',
     image: productImages['higgs-game-island'],
@@ -20,6 +22,7 @@ const flashSaleItems = [
   },
   {
     productId: 'higgs-game-island',
+    denominationId: 'higgs-3b',
     name: 'Higgs Game Island',
     meta: 'Tukar Kartu (3B)',
     image: productImages['higgs-game-island'],
@@ -28,6 +31,7 @@ const flashSaleItems = [
   },
   {
     productId: 'mobile-legend',
+    denominationId: 'ml-250',
     name: 'Mobile Legend',
     meta: '250 Diamonds',
     image: productImages['mobile-legend'],
@@ -36,6 +40,7 @@ const flashSaleItems = [
   },
   {
     productId: 'free-fire',
+    denominationId: 'ff-355',
     name: 'Free Fire',
     meta: '355 Diamonds',
     image: productImages['free-fire'],
@@ -44,6 +49,7 @@ const flashSaleItems = [
   },
   {
     productId: 'valorant',
+    denominationId: 'val-1000',
     name: 'Valorant',
     meta: '1000 VP',
     image: productImages['valorant'],
@@ -52,7 +58,30 @@ const flashSaleItems = [
   }
 ];
 
-export default function FlashSale({ onSelectProduct }) {
+const formatRupiah = (value) => new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  maximumFractionDigits: 0,
+}).format(Number(value || 0)).replace(/\s/g, ' ');
+
+function resolveFlashSaleItems(products = []) {
+  return flashSaleItems.map((fallback) => {
+    const product = products.find((item) => item.id === fallback.productId);
+    const denomination = product?.denominations?.find((item) => item.id === fallback.denominationId);
+    if (!product || !denomination) return fallback;
+
+    return {
+      ...fallback,
+      name: product.name || fallback.name,
+      meta: denomination.name || fallback.meta,
+      image: denomination.image || product.image || fallback.image,
+      originalPrice: formatRupiah(denomination.originalPrice || denomination.price),
+      price: formatRupiah(denomination.price),
+    };
+  });
+}
+
+export default function FlashSale({ onSelectProduct, products = [] }) {
   // Let's set countdown to count down 8 hours from now repeatedly, or show a timer
   const [timeLeft, setTimeLeft] = useState({ hours: '08', minutes: '00', seconds: '00' });
 
@@ -89,7 +118,8 @@ export default function FlashSale({ onSelectProduct }) {
   };
 
   // Duplicate items for seamless marquee scrolling
-  const marqueeItems = [...flashSaleItems, ...flashSaleItems];
+  const resolvedItems = resolveFlashSaleItems(products);
+  const marqueeItems = [...resolvedItems, ...resolvedItems];
 
   return (
     <section className="flash-sale-section mb-4">

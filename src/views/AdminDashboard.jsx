@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { productImages } from '../assets/images';
 import { stampRewards, stampTypes } from '../data/stampRewards';
-import { readStorageList, safeJsonParse, writeStorageList } from '../lib/storage';
+import { readStorageList, writeStorageList } from '../lib/storage';
 import {
   assignPrizeToRedemption,
   awardStampForTransaction,
@@ -25,7 +25,7 @@ import {
   hasManagedStock,
   restockLowStockProduct,
 } from '../lib/productStock';
-import { writeCloudBackedValue } from '../lib/cloudState';
+import { getChatThreads, getLatestThreadMessage, saveChatThread } from '../lib/chatThreads';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -67,6 +67,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   });
 
   // Chat state
+  const [chatThreads, setChatThreads] = useState([]);
+  const [selectedChatId, setSelectedChatId] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [adminMode, setAdminMode] = useState(false);
   const [activeAdmin, setActiveAdmin] = useState('Ardan'); // 'Ardan' | 'Sarah' | 'Ardian'
@@ -122,35 +124,52 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   // Load chats from localStorage
   useEffect(() => {
     const loadChats = () => {
-      const savedMsgs = localStorage.getItem('goisiin_chat_messages');
-      const savedAdminMode = localStorage.getItem('goisiin_chat_admin_mode');
-      const savedActiveAdmin = localStorage.getItem('goisiin_chat_active_admin');
+      const threads = getChatThreads();
+      setChatThreads(threads);
 
-      if (savedMsgs) setChatMessages(readStorageList('goisiin_chat_messages'));
-      if (savedAdminMode) setAdminMode(Boolean(safeJsonParse(savedAdminMode, false)));
-      if (savedActiveAdmin) setActiveAdmin(savedActiveAdmin);
+      const nextSelectedId = selectedChatId && threads.some((thread) => thread.id === selectedChatId)
+        ? selectedChatId
+        : (threads[0]?.id || null);
+      if (nextSelectedId !== selectedChatId) setSelectedChatId(nextSelectedId);
+
+      const selectedThread = threads.find((thread) => thread.id === nextSelectedId);
+      setChatMessages(selectedThread?.messages || []);
+      setAdminMode(Boolean(selectedThread?.adminMode));
+      if (selectedThread?.activeAdmin) setActiveAdmin(selectedThread.activeAdmin);
     };
 
     loadChats();
     // Poll for changes every 2 seconds to simulate real-time updates
     const pollTimer = setInterval(loadChats, 2000);
     return () => clearInterval(pollTimer);
-  }, []);
+  }, [selectedChatId]);
 
   const handleSaveChats = (msgs, mode = adminMode, adminName = activeAdmin) => {
+    if (!selectedChatId) return;
     const safeMessages = Array.isArray(msgs) ? msgs.slice(-300) : [];
+    const existingThread = chatThreads.find((thread) => thread.id === selectedChatId) || {
+      id: selectedChatId,
+      userName: 'Pengunjung',
+      userEmail: '',
+      messages: [],
+    };
+    const savedThread = saveChatThread({
+      ...existingThread,
+      messages: safeMessages,
+      adminMode: mode,
+      activeAdmin: adminName,
+    });
+    const threads = getChatThreads();
+    setChatThreads(threads);
+    setSelectedChatId(savedThread.id);
     setChatMessages(safeMessages);
     setAdminMode(mode);
-    writeStorageList('goisiin_chat_messages', safeMessages);
-    writeCloudBackedValue('goisiin_chat_admin_mode', mode);
-    writeCloudBackedValue('goisiin_chat_active_admin', adminName);
-    // Sync storage event
-    window.dispatchEvent(new Event('storage'));
+    setActiveAdmin(adminName);
   };
 
   const handleAdminSendChat = (e) => {
     e.preventDefault();
-    if (!adminInput.trim()) return;
+    if (!adminInput.trim() || !selectedChatId) return;
 
     setAdminTyping(true);
     const textToSend = cleanAdminText(adminInput, 500);
@@ -175,6 +194,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   };
 
   const handleToggleAdminMode = () => {
+    if (!selectedChatId) return;
     const nextMode = !adminMode;
     const sysMsg = {
       id: `sys-${Date.now()}`,
@@ -701,13 +721,52 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     value={activeAdmin}
                     onChange={e => {
                       setActiveAdmin(e.target.value);
-                      writeCloudBackedValue('goisiin_chat_active_admin', e.target.value);
+                      if (selectedChatId) handleSaveChats(chatMessages, adminMode, e.target.value);
                     }}
                   >
                     <option value="Ardan">Ardan</option>
                     <option value="Sarah">Sarah</option>
                     <option value="Ardian">Ardian</option>
                   </select>
+                </div>
+
+                <div className="mb-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <label className="form-label text-secondary small mb-0">Percakapan Customer</label>
+                    <span className="badge bg-success">{chatThreads.length}</span>
+                  </div>
+                  <div className="d-flex flex-column gap-2" style={{ maxHeight: '260px', overflowY: 'auto' }}>
+                    {chatThreads.length === 0 ? (
+                      <div className="text-secondary small border border-secondary rounded p-2">
+                        Belum ada percakapan masuk.
+                      </div>
+                    ) : (
+                      chatThreads.map((thread) => {
+                        const latest = getLatestThreadMessage(thread);
+                        const isActive = thread.id === selectedChatId;
+                        return (
+                          <button
+                            type="button"
+                            key={thread.id}
+                            className={`btn text-start border ${isActive ? 'btn-success border-success' : 'btn-dark border-secondary'}`}
+                            onClick={() => setSelectedChatId(thread.id)}
+                            style={{ fontSize: '0.82rem' }}
+                          >
+                            <div className="d-flex justify-content-between gap-2">
+                              <strong className="text-truncate">{thread.userName || 'Pengunjung'}</strong>
+                              {thread.adminMode && <span className="badge bg-danger">Admin</span>}
+                            </div>
+                            <div className={isActive ? 'text-white-50 text-truncate' : 'text-secondary text-truncate'}>
+                              {thread.userEmail || 'Guest'}
+                            </div>
+                            <div className={isActive ? 'text-white-50 text-truncate' : 'text-secondary text-truncate'}>
+                              {latest?.text || 'Belum ada pesan'}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
 
                 {/* Status Mode */}
@@ -737,7 +796,14 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
             {/* Chat Box Viewer */}
             <div className="col-md-8 col-12">
               <div className="order-card p-3 d-flex flex-column" style={{ height: '500px' }}>
-                <h5 className="text-success fw-bold mb-3">Obrolan Customer</h5>
+                <h5 className="text-success fw-bold mb-3">
+                  Obrolan Customer
+                  {selectedChatId && (
+                    <span className="text-secondary fw-normal ms-2" style={{ fontSize: '0.85rem' }}>
+                      {chatThreads.find((thread) => thread.id === selectedChatId)?.userName || 'Pengunjung'}
+                    </span>
+                  )}
+                </h5>
 
                 {/* Message Box */}
                 <div className="flex-grow-1 border border-secondary rounded p-3 mb-3" style={{ overflowY: 'auto', background: 'rgba(0,0,0,0.2)' }}>
@@ -792,9 +858,9 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     value={adminInput}
                     onChange={e => setAdminInput(e.target.value)}
                     placeholder={`Kirim balasan sebagai Admin ${activeAdmin}...`}
-                    disabled={!adminMode}
+                    disabled={!adminMode || !selectedChatId}
                   />
-                  <button type="submit" className="btn btn-success" disabled={!adminInput.trim() || !adminMode}>
+                  <button type="submit" className="btn btn-success" disabled={!adminInput.trim() || !adminMode || !selectedChatId}>
                     Kirim
                   </button>
                 </form>

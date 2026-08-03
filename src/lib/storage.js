@@ -53,11 +53,15 @@ export function normalizeStoredProducts(savedProducts, fallbackProducts) {
     const savedProduct = mergedById.get(product.id);
     const savedText = JSON.stringify(savedProduct).toLowerCase();
     const fallbackDenominationIds = new Set((product.denominations || []).map((denom) => denom.id));
+    const savedDenominationIds = new Set((savedProduct.denominations || []).map((denom) => denom.id));
     const savedHasUnknownDenomination = (savedProduct.denominations || [])
       .some((denom) => !fallbackDenominationIds.has(denom.id));
+    const savedMissingCurrentDenomination = (product.denominations || [])
+      .some((denom) => !savedDenominationIds.has(denom.id));
     const shouldReplaceStaleAiCatalog = product.id === 'kebutuhan-ai' && (
       savedText.includes('sharing') ||
-      savedHasUnknownDenomination
+      savedHasUnknownDenomination ||
+      savedMissingCurrentDenomination
     );
 
     if (shouldReplaceStaleAiCatalog) {

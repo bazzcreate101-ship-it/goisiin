@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { paymentChannels } from '../data/products';
 import { STAMP_MIN_TRANSACTION, stampRewards, stampTypes } from '../data/stampRewards';
 import { promoInfo, siteMechanics, supportInfo } from '../data/siteInfo';
-import { safeJsonParse } from '../lib/storage';
 import { getWalletBalance, getWalletEntries, getWithdrawalRequests } from '../lib/walletService';
-import { writeCloudBackedValue } from '../lib/cloudState';
+import { getChatIdentity, getChatThread, saveChatThread } from '../lib/chatThreads';
 
 const MAX_MESSAGE_LENGTH = 600;
 const CLIENT_COOLDOWN_MS = 1800;
@@ -18,49 +17,37 @@ export default function ChatWidget({ products, user, transactions }) {
   const [activeAdmin, setActiveAdmin] = useState(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const messagesEndRef = useRef(null);
+  const chatIdentity = useMemo(() => getChatIdentity(user), [user]);
 
   useEffect(() => {
-    const savedMsgs = localStorage.getItem('goisiin_chat_messages');
-    const savedAdminMode = localStorage.getItem('goisiin_chat_admin_mode');
-    const savedActiveAdmin = localStorage.getItem('goisiin_chat_active_admin');
-
-    if (savedMsgs) {
-      setMessages(safeJsonParse(savedMsgs, []));
-    } else {
-      const initial = [
-        {
-          id: 'init-1',
-          sender: 'cs',
-          agent: 'Vindy',
-          text: 'Halo Kak! Selamat datang di Goisiin. Vindy siap bantu soal produk, harga, pembayaran, promo, transaksi, dan bantuan CS.',
-          timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-        }
-      ];
-      setMessages(initial);
-      writeCloudBackedValue('goisiin_chat_messages', initial);
-    }
-
-    if (savedAdminMode) setAdminMode(Boolean(safeJsonParse(savedAdminMode, false)));
-    if (savedActiveAdmin) setActiveAdmin(savedActiveAdmin);
-  }, []);
+    const thread = getChatThread(chatIdentity);
+    setMessages(thread.messages);
+    setAdminMode(Boolean(thread.adminMode));
+    setActiveAdmin(thread.activeAdmin || null);
+    saveChatThread({
+      ...thread,
+      userName: chatIdentity.userName,
+      userEmail: chatIdentity.userEmail,
+      isGuest: chatIdentity.isGuest,
+    });
+  }, [chatIdentity]);
 
   useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (!e.key || e.key === 'goisiin_chat_messages') {
-        const savedMessages = localStorage.getItem('goisiin_chat_messages');
-        if (savedMessages) setMessages(safeJsonParse(savedMessages, []));
-      }
-      if (!e.key || e.key === 'goisiin_chat_admin_mode') {
-        const savedMode = localStorage.getItem('goisiin_chat_admin_mode');
-        if (savedMode) setAdminMode(Boolean(safeJsonParse(savedMode, false)));
-      }
-      if (!e.key || e.key === 'goisiin_chat_active_admin') {
-        setActiveAdmin(localStorage.getItem('goisiin_chat_active_admin') || null);
-      }
+    const handleStorageChange = () => {
+      const thread = getChatThread(chatIdentity);
+      setMessages(thread.messages);
+      setAdminMode(Boolean(thread.adminMode));
+      setActiveAdmin(thread.activeAdmin || null);
     };
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    window.addEventListener('goisiin:cloud-state-updated', handleStorageChange);
+    window.addEventListener('goisiin:chat-threads-updated', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('goisiin:cloud-state-updated', handleStorageChange);
+      window.removeEventListener('goisiin:chat-threads-updated', handleStorageChange);
+    };
+  }, [chatIdentity]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -71,9 +58,16 @@ export default function ChatWidget({ products, user, transactions }) {
     setMessages(limitedMessages);
     setAdminMode(newAdminMode);
     setActiveAdmin(newAdmin);
-    writeCloudBackedValue('goisiin_chat_messages', limitedMessages);
-    writeCloudBackedValue('goisiin_chat_admin_mode', newAdminMode);
-    writeCloudBackedValue('goisiin_chat_active_admin', newAdmin || null);
+    const existingThread = getChatThread(chatIdentity);
+    saveChatThread({
+      ...existingThread,
+      userName: chatIdentity.userName,
+      userEmail: chatIdentity.userEmail,
+      isGuest: chatIdentity.isGuest,
+      messages: limitedMessages,
+      adminMode: newAdminMode,
+      activeAdmin: newAdmin || null,
+    });
   };
 
   const buildChatContext = () => {
@@ -83,9 +77,12 @@ export default function ChatWidget({ products, user, transactions }) {
       ? getWithdrawalRequests().filter((request) => request.userEmail === user.email).slice(0, 12)
       : [];
 
+    const activeProducts = products.filter((product) => product.active !== false);
+    const aiProduct = activeProducts.find((product) => product.id === 'kebutuhan-ai' || /kebutuhan ai|chatgpt|claude|gemini|grok/i.test(`${product.name} ${product.description || ''}`));
+
     return ({
     user: user ? { name: user.name, email: user.email } : null,
-    products: products.filter((product) => product.active !== false).map((product) => ({
+    products: activeProducts.map((product) => ({
       id: product.id,
       name: product.name,
       category: product.category,
@@ -107,6 +104,22 @@ export default function ChatWidget({ products, user, transactions }) {
         description: denom.description,
       })),
     })),
+    aiCatalog: aiProduct ? {
+      productId: aiProduct.id,
+      productName: aiProduct.name,
+      description: aiProduct.description,
+      inputLabel: aiProduct.inputLabel,
+      packages: (aiProduct.denominations || []).map((denom) => ({
+        id: denom.id,
+        name: denom.name,
+        price: denom.price,
+        stock: denom.stock,
+        accessType: denom.accessType || 'Private',
+        duration: denom.duration,
+        warranty: denom.warranty,
+        description: denom.description,
+      })),
+    } : null,
     paymentChannels: paymentChannels.map((channel) => ({
       id: channel.id,
       category: channel.category,

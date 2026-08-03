@@ -14,6 +14,7 @@ const ALLOWED_KEYS = new Set([
   'goisiin_transactions',
   'goisiin_users',
   'goisiin_products',
+  'goisiin_chat_threads',
   'goisiin_chat_messages',
   'goisiin_chat_admin_mode',
   'goisiin_chat_active_admin',
