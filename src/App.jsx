@@ -24,6 +24,7 @@ import {
 } from './lib/storage';
 import { autoRestockProducts } from './lib/productStock';
 import { hydrateCloudState, writeCloudBackedValue } from './lib/cloudState';
+import { trackTrafficView } from './lib/trafficTracker';
 
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
 
@@ -233,6 +234,23 @@ function App() {
       window.removeEventListener('popstate', checkUrl);
     };
   }, [user]);
+
+  useEffect(() => {
+    trackTrafficView();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') trackTrafficView();
+    };
+
+    window.addEventListener('hashchange', trackTrafficView);
+    window.addEventListener('popstate', trackTrafficView);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('hashchange', trackTrafficView);
+      window.removeEventListener('popstate', trackTrafficView);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

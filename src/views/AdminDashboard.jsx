@@ -40,6 +40,7 @@ const initialCategories = [
 ];
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+const formatNumber = (num) => new Intl.NumberFormat('id-ID').format(Number(num || 0));
 const cleanAdminText = (value, limit = 160) => String(value ?? '').trim().replace(/[<>`{}]/g, '').slice(0, limit);
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
 const stampRedemptionStatusLabels = {
@@ -70,6 +71,24 @@ function mergeUsers(...userLists) {
 
   return Array.from(usersByEmail.values())
     .sort((a, b) => String(b.lastLogin || b.registeredAt || '').localeCompare(String(a.lastLogin || a.registeredAt || '')));
+}
+
+function topEntries(value, limit = 6) {
+  return Object.entries(value || {})
+    .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+    .slice(0, limit);
+}
+
+function formatTrafficHour(hour) {
+  if (!hour) return '-';
+  const date = new Date(`${hour}:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return hour;
+  return date.toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 async function fetchAuthUsersForAdmin() {
@@ -117,6 +136,10 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const [activeAdmin, setActiveAdmin] = useState('Ardan'); // 'Ardan' | 'Sarah' | 'Ardian'
   const [adminInput, setAdminInput] = useState('');
   const [adminTyping, setAdminTyping] = useState(false);
+  const [trafficData, setTrafficData] = useState(null);
+  const [trafficLoading, setTrafficLoading] = useState(false);
+  const [trafficError, setTrafficError] = useState('');
+  const [trafficRefreshTick, setTrafficRefreshTick] = useState(0);
 
   // Load transactions and users from cloud-backed local cache + Supabase Auth
   useEffect(() => {
@@ -142,6 +165,39 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       clearInterval(timer);
     };
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'traffic') return undefined;
+
+    let isMounted = true;
+    const loadTraffic = async () => {
+      const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+      if (!token) return;
+      setTrafficLoading(true);
+      setTrafficError('');
+      try {
+        const response = await fetch('/api/traffic', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'Data trafik belum bisa dimuat.');
+        }
+        if (isMounted) setTrafficData(data);
+      } catch (error) {
+        if (isMounted) setTrafficError(cleanAdminText(error.message || 'Data trafik belum bisa dimuat.', 160));
+      } finally {
+        if (isMounted) setTrafficLoading(false);
+      }
+    };
+
+    loadTraffic();
+    const timer = setInterval(loadTraffic, 60 * 1000);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, [activeTab, trafficRefreshTick]);
 
   const handleUpdateTxStatus = (invoiceId, nextStatus) => {
     let stampResult = null;
@@ -517,6 +573,12 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
             onClick={() => setActiveTab('stamps')}
           >
             Stamp Reward
+          </button>
+          <button
+            className={`btn btn-sm ${activeTab === 'traffic' ? 'btn-success' : 'btn-outline-success'}`}
+            onClick={() => setActiveTab('traffic')}
+          >
+            Trafik
           </button>
         </div>
 
@@ -1119,6 +1181,153 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'traffic' && (
+          <div className="row g-3">
+            <div className="col-12">
+              <div className="order-card p-3">
+                <div className="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                  <div>
+                    <h5 className="text-success fw-bold mb-1">Trafik Pengunjung Website</h5>
+                    <p className="text-secondary mb-0" style={{ fontSize: '0.84rem' }}>
+                      Agregasi hemat 72 jam terakhir. Data perangkat di-hash, tanpa menyimpan IP mentah.
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-outline-success btn-sm"
+                    type="button"
+                    onClick={() => setTrafficRefreshTick((tick) => tick + 1)}
+                    disabled={trafficLoading}
+                  >
+                    <i className="bi bi-arrow-repeat me-1"></i>
+                    {trafficLoading ? 'Memuat...' : 'Refresh'}
+                  </button>
+                </div>
+
+                {trafficError && (
+                  <div className="alert alert-warning py-2 px-3 mt-3 mb-0" style={{ fontSize: '0.82rem' }}>
+                    {trafficError}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {[
+              ['Total hit', trafficData?.totals?.visits, 'Semua heartbeat pengunjung'],
+              ['Unique device', trafficData?.totals?.uniqueDevices, 'Perangkat/browser berbeda'],
+              ['Session', trafficData?.totals?.sessions, 'Sesi aktif yang tercatat'],
+              ['Hit perangkat sama', trafficData?.totals?.sameDeviceVisits, 'Kunjungan ulang dari device yang sama'],
+            ].map(([label, value, hint]) => (
+              <div className="col-lg-3 col-6" key={label}>
+                <div className="order-card p-3 h-100">
+                  <div className="text-secondary" style={{ fontSize: '0.78rem' }}>{label}</div>
+                  <div className="text-white fw-bold mt-1" style={{ fontSize: '1.45rem', fontFamily: "'Oxanium', sans-serif" }}>
+                    {trafficLoading && !trafficData ? '...' : formatNumber(value)}
+                  </div>
+                  <div className="text-secondary" style={{ fontSize: '0.74rem' }}>{hint}</div>
+                </div>
+              </div>
+            ))}
+
+            <div className="col-lg-4 col-12">
+              <div className="order-card p-3 h-100">
+                <h6 className="text-success fw-bold mb-3">Jenis Perangkat</h6>
+                {topEntries(trafficData?.totals?.devices).length === 0 ? (
+                  <p className="text-secondary mb-0">Belum ada data perangkat.</p>
+                ) : topEntries(trafficData?.totals?.devices).map(([name, count]) => (
+                  <div className="d-flex justify-content-between border-bottom border-secondary py-2" key={name}>
+                    <span>{name}</span>
+                    <strong className="text-success">{formatNumber(count)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="col-lg-4 col-12">
+              <div className="order-card p-3 h-100">
+                <h6 className="text-success fw-bold mb-3">Browser</h6>
+                {topEntries(trafficData?.totals?.browsers).length === 0 ? (
+                  <p className="text-secondary mb-0">Belum ada data browser.</p>
+                ) : topEntries(trafficData?.totals?.browsers).map(([name, count]) => (
+                  <div className="d-flex justify-content-between border-bottom border-secondary py-2" key={name}>
+                    <span>{name}</span>
+                    <strong className="text-success">{formatNumber(count)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="col-lg-4 col-12">
+              <div className="order-card p-3 h-100">
+                <h6 className="text-success fw-bold mb-3">Sistem Operasi</h6>
+                {topEntries(trafficData?.totals?.os).length === 0 ? (
+                  <p className="text-secondary mb-0">Belum ada data OS.</p>
+                ) : topEntries(trafficData?.totals?.os).map(([name, count]) => (
+                  <div className="d-flex justify-content-between border-bottom border-secondary py-2" key={name}>
+                    <span>{name}</span>
+                    <strong className="text-success">{formatNumber(count)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="col-lg-5 col-12">
+              <div className="order-card p-3 h-100">
+                <h6 className="text-success fw-bold mb-3">Halaman Paling Sering Dibuka</h6>
+                {topEntries(trafficData?.totals?.pages, 10).length === 0 ? (
+                  <p className="text-secondary mb-0">Belum ada data halaman.</p>
+                ) : topEntries(trafficData?.totals?.pages, 10).map(([page, count]) => (
+                  <div className="d-flex justify-content-between gap-2 border-bottom border-secondary py-2" key={page}>
+                    <span className="text-truncate">{page}</span>
+                    <strong className="text-success">{formatNumber(count)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="col-lg-7 col-12">
+              <div className="order-card p-3 h-100">
+                <h6 className="text-success fw-bold mb-3">Trafik per Jam</h6>
+                <div className="table-responsive" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                  <table className="table table-dark table-striped align-middle" style={{ fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr>
+                        <th>Jam</th>
+                        <th>Hit</th>
+                        <th>Device</th>
+                        <th>Baru</th>
+                        <th>Returning</th>
+                        <th>Device Sama</th>
+                        <th>Dominan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(trafficData?.hours || []).length === 0 ? (
+                        <tr><td colSpan="7" className="text-center text-secondary py-4">Belum ada data trafik.</td></tr>
+                      ) : trafficData.hours.slice(0, 24).map((hour) => {
+                        const dominantDevice = topEntries(hour.devices, 1)[0]?.[0] || '-';
+                        return (
+                          <tr key={hour.hour}>
+                            <td>{formatTrafficHour(hour.hour)}</td>
+                            <td className="fw-bold text-success">{formatNumber(hour.visits)}</td>
+                            <td>{formatNumber(hour.uniqueDevices)}</td>
+                            <td>{formatNumber(hour.newDevices)}</td>
+                            <td>{formatNumber(hour.returningDevices)}</td>
+                            <td>{formatNumber(hour.sameDeviceVisits)}</td>
+                            <td>{dominantDevice}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-secondary mt-2 mb-0" style={{ fontSize: '0.75rem' }}>
+                  “Device sama” = total hit dikurangi unique device pada jam itu. Cocok untuk melihat refresh/kunjungan ulang dari perangkat yang sama.
+                </p>
+              </div>
             </div>
           </div>
         )}
