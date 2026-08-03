@@ -3655,6 +3655,22 @@ footer a:hover {
   background: rgba(255, 255, 255, 0.035);
 }
 
+.stamp-empty-state--action {
+  display: grid;
+  gap: 0.35rem;
+  align-content: center;
+}
+
+.stamp-empty-state--action strong {
+  color: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.stamp-empty-state--action span {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
 .stamp-redemption-list {
   display: grid;
   gap: 0.8rem;
@@ -3662,12 +3678,16 @@ footer a:hover {
 
 .stamp-redemption-card {
   display: grid;
-  grid-template-columns: minmax(180px, 0.6fr) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 0.55fr) minmax(0, 1fr);
   gap: 1rem;
   padding: 0.9rem;
   border: 1px solid rgba(234, 225, 96, 0.18);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.045);
+}
+
+.stamp-redemption-card__summary {
+  min-width: 0;
 }
 
 .stamp-redemption-card h3 {
@@ -3677,20 +3697,103 @@ footer a:hover {
   font-weight: 900;
 }
 
+.stamp-progress-steps {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+}
+
+.stamp-progress-steps span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.stamp-progress-steps span.is-active {
+  color: #111827;
+  background: #e6de55;
+  box-shadow: 0 0 0 3px rgba(230, 222, 85, 0.12);
+}
+
+.stamp-flow-card {
+  background:
+    radial-gradient(circle at top right, rgba(234, 225, 96, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.045) !important;
+}
+
+.stamp-flow-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: stamp-flow;
+}
+
+.stamp-flow-list li {
+  position: relative;
+  display: grid;
+  gap: 0.1rem;
+  padding-left: 2rem;
+  color: #cbd5e1;
+}
+
+.stamp-flow-list li::before {
+  counter-increment: stamp-flow;
+  content: counter(stamp-flow);
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  color: #111827;
+  background: #e6de55;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.stamp-flow-list strong {
+  color: #ffffff;
+  font-size: 0.88rem;
+}
+
+.stamp-flow-list span {
+  color: #9ca3af;
+  font-size: 0.78rem;
+}
+
 .stamp-reveal-box {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
+  min-width: 0;
 }
 
 .stamp-spinner {
   display: flex;
   gap: 0.55rem;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
   padding: 0.7rem;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.2);
+}
+
+.stamp-spinner::-webkit-scrollbar {
+  display: none;
 }
 
 .stamp-spinner span {
@@ -3718,7 +3821,9 @@ footer a:hover {
   gap: 0.9rem;
   padding: 0.85rem;
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(106, 170, 74, 0.18), rgba(234, 225, 96, 0.10));
+  background:
+    radial-gradient(circle at 24% 50%, rgba(230, 222, 85, 0.16), transparent 34%),
+    linear-gradient(135deg, rgba(106, 170, 74, 0.18), rgba(234, 225, 96, 0.10));
 }
 
 .stamp-result img {
@@ -3734,6 +3839,12 @@ footer a:hover {
   color: #ffffff;
 }
 
+.stamp-result p {
+  margin: 0.15rem 0 0.4rem;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+}
+
 .stamp-result code {
   display: inline-flex;
   padding: 0.35rem 0.55rem;
@@ -3741,6 +3852,12 @@ footer a:hover {
   color: #111827;
   background: #e6de55;
   font-weight: 900;
+}
+
+.stamp-claim-hint {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.84rem;
 }
 
 @media (max-width: 768px) {

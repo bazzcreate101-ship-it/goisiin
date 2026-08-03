@@ -36,6 +36,72 @@ const initialClaim = {
   walletNumber: '',
 };
 
+const statusCopy = {
+  pending_prize: {
+    label: 'Menunggu hadiah',
+    title: 'Admin sedang menentukan hadiah',
+    description: 'Set stamp sudah diterima sistem. Admin akan memilih hadiah, lalu tombol reveal/spin akan muncul di halaman ini.',
+    step: 2,
+  },
+  prize_assigned: {
+    label: 'Siap reveal',
+    title: 'Hadiah sudah dipilih admin',
+    description: 'Tekan tombol spin untuk membuka hadiah. Setelah hadiah muncul, lengkapi form klaim sesuai tipe hadiah.',
+    step: 3,
+  },
+  claimed: {
+    label: 'Klaim dikirim',
+    title: 'Form klaim sudah diterima',
+    description: 'Tim Goisiin sedang memproses pengiriman hadiah atau saldo ke data klaim yang kamu isi.',
+    step: 4,
+  },
+  fulfilled: {
+    label: 'Selesai',
+    title: 'Hadiah sudah selesai diproses',
+    description: 'Hadiah sudah dipenuhi. Simpan bukti/kode voucher jika tersedia.',
+    step: 4,
+  },
+  rejected: {
+    label: 'Perlu cek admin',
+    title: 'Klaim perlu ditinjau ulang',
+    description: 'Hubungi admin Goisiin untuk konfirmasi data klaim atau status penukaran.',
+    step: 4,
+  },
+};
+
+const codeStatusCopy = {
+  active: 'Aktif',
+  redeemed: 'Sudah dipakai',
+  expired: 'Kedaluwarsa',
+  cancelled: 'Dibatalkan',
+};
+
+const eventKindCopy = {
+  earned: 'Dapat stamp',
+  admin_grant: 'Bonus admin',
+  admin_revoke: 'Dicabut',
+  code_out: 'Kode dibuat',
+  code_in: 'Kode diredeem',
+  redeem_consume: 'Ditukar hadiah',
+};
+
+function getRedemptionCopy(status) {
+  return statusCopy[status] || {
+    label: status || 'Status',
+    title: 'Status penukaran',
+    description: 'Status penukaran sedang diperbarui.',
+    step: 1,
+  };
+}
+
+function getClaimHint(reward) {
+  if (!reward) return '';
+  if (reward.type === 'physical') return 'Isi nama penerima, nomor HP, dan alamat lengkap untuk pengiriman barang.';
+  if (reward.type === 'wallet_balance') return 'Isi provider dan nomor e-wallet aktif agar saldo bisa diproses.';
+  if (reward.type === 'voucher_code') return 'Kode voucher akan tampil langsung setelah diaktifkan.';
+  return '';
+}
+
 export default function StampView({ user, onLoginOpen, onNavigate }) {
   const userEmail = normalizeEmail(user?.email);
   const [, setRefreshKey] = useState(0);
@@ -230,7 +296,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
         <section className="stamp-share-panel mt-3">
           <article className="order-card h-100">
             <span className="stamp-eyebrow">Bagikan Stamp</span>
-            <h2 className="stamp-section-title">Mekanisme kode redeem</h2>
+            <h2 className="stamp-section-title">Kirim stamp lewat kode</h2>
             <p className="text-secondary mb-2">
               Klik stamp yang kamu punya untuk membuat kode redeem. Stamp akan keluar dari akun kamu
               saat kode dibuat, lalu masuk ke akun user yang menukarkan kode tersebut.
@@ -274,7 +340,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                   </p>
                 </div>
                 <div className="stamp-list__actions">
-                  <span className={`stamp-status stamp-status--${code.status}`}>{code.status}</span>
+                  <span className={`stamp-status stamp-status--${code.status}`}>{codeStatusCopy[code.status] || code.status}</span>
                   {['active', 'expired'].includes(code.status) && normalizeEmail(code.ownerEmail) === userEmail && (
                     <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => handleCancelCode(code.id)}>
                       Batalkan
@@ -320,7 +386,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                       <strong>{event.delta > 0 ? '+' : ''}{event.delta} Stamp {event.stampNo}</strong>
                       <p>{event.note || event.kind}<br /><span>{event.createdAt}</span></p>
                     </div>
-                    <span className="stamp-status">{event.kind}</span>
+                    <span className="stamp-status">{eventKindCopy[event.kind] || event.kind}</span>
                   </div>
                 ))}
               </div>
@@ -328,15 +394,27 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
           </div>
 
           <div className="col-lg-6 col-12">
-            <section className="order-card h-100">
-              <span className="stamp-eyebrow">Penukaran</span>
-              <h2 className="stamp-section-title">Hadiah saya</h2>
-              <div className="stamp-empty-state">Klaim hadiah akan muncul di sini setelah 6 stamp unik ditukar.</div>
+            <section className="order-card h-100 stamp-flow-card">
+              <span className="stamp-eyebrow">Alur Penukaran</span>
+              <h2 className="stamp-section-title">Cara klaim hadiah</h2>
+              <ol className="stamp-flow-list">
+                <li><strong>Lengkapi 6 stamp unik</strong><span>Stamp 1 sampai 6 harus lengkap.</span></li>
+                <li><strong>Tukar 1 set stamp</strong><span>Stamp dipakai dan masuk antrean admin.</span></li>
+                <li><strong>Reveal hadiah</strong><span>Hadiah dipilih admin, lalu kamu spin untuk membuka hasil.</span></li>
+                <li><strong>Isi klaim</strong><span>Alamat untuk barang, nomor e-wallet untuk saldo, atau kode voucher langsung aktif.</span></li>
+              </ol>
             </section>
           </div>
         </div>
 
         <section className="order-card mt-3">
+          <div className="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-3">
+            <div>
+              <span className="stamp-eyebrow">Penukaran</span>
+              <h2 className="stamp-section-title mb-1">Hadiah saya</h2>
+              <p className="text-secondary mb-0">Pantau status penukaran, reveal hadiah, dan isi data klaim di sini.</p>
+            </div>
+          </div>
           {redemptions.length === 0 ? (
             <div className="stamp-empty-state">Belum ada penukaran. Lengkapi 6 stamp unik dulu.</div>
           ) : (
@@ -344,27 +422,40 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
               {redemptions.map((redemption) => {
                 const reward = stampRewards.find((item) => item.id === redemption.prizeId);
                 const isVisibleResult = spinState.prizeId === redemption.prizeId && spinState.redemptionId === redemption.id;
+                const copy = getRedemptionCopy(redemption.status);
                 return (
                   <article className="stamp-redemption-card" key={redemption.id}>
-                    <div>
-                      <span className={`stamp-status stamp-status--${redemption.status}`}>{redemption.status}</span>
-                      <h3>Penukaran #{redemption.id.slice(-8).toUpperCase()}</h3>
-                      <p className="text-secondary">Dibuat: {redemption.createdAt}</p>
+                    <div className="stamp-redemption-card__summary">
+                      <span className={`stamp-status stamp-status--${redemption.status}`}>{copy.label}</span>
+                      <h3>{copy.title}</h3>
+                      <p className="text-secondary mb-2">ID Penukaran: #{redemption.id.slice(-6).toUpperCase()}<br />Dibuat: {redemption.createdAt}</p>
+                      <div className="stamp-progress-steps" aria-label={`Tahap ${copy.step} dari 4`}>
+                        {[1, 2, 3, 4].map((step) => (
+                          <span className={step <= copy.step ? 'is-active' : ''} key={step}>{step}</span>
+                        ))}
+                      </div>
                     </div>
 
                     {redemption.status === 'pending_prize' && (
-                      <div className="stamp-empty-state">Menunggu admin menentukan hadiah.</div>
+                      <div className="stamp-empty-state stamp-empty-state--action">
+                        <strong>{copy.description}</strong>
+                        <span>Biasanya status berubah setelah admin mengecek antrean penukaran.</span>
+                      </div>
                     )}
 
                     {reward && (
                       <div className="stamp-reveal-box">
-                        <div className={`stamp-spinner ${spinState.spinning && spinState.redemptionId === redemption.id ? 'stamp-spinner--active' : ''}`}>
-                          {stampRewards.slice(0, 6).map((item) => <span key={item.id}>{item.name}</span>)}
-                        </div>
-                        {!isVisibleResult && redemption.status === 'prize_assigned' && (
-                          <button className="btn btn-success fw-bold" onClick={() => handleSpinReveal(redemption)}>
-                            Mulai Spin Hadiah
-                          </button>
+                        {redemption.status === 'prize_assigned' && (
+                          <>
+                            <div className={`stamp-spinner ${spinState.spinning && spinState.redemptionId === redemption.id ? 'stamp-spinner--active' : ''}`}>
+                              {stampRewards.map((item) => <span key={item.id}>{item.name}</span>)}
+                            </div>
+                            {!isVisibleResult && (
+                              <button className="btn btn-success fw-bold" onClick={() => handleSpinReveal(redemption)}>
+                                Mulai Spin Hadiah
+                              </button>
+                            )}
+                          </>
                         )}
                         {(isVisibleResult || redemption.status === 'claimed' || redemption.status === 'fulfilled') && (
                           <div className="stamp-result">
@@ -374,6 +465,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                             <div>
                               <span>{reward.tier}</span>
                               <h3>{reward.name}</h3>
+                              <p>{getClaimHint(reward)}</p>
                               {redemption.voucherCode && (
                                 <code>{redemption.voucherCode}</code>
                               )}
@@ -385,6 +477,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
 
                     {reward && ['prize_assigned'].includes(redemption.status) && (isVisibleResult || reward.type === 'voucher_code') && (
                       <form className="stamp-claim-form" onSubmit={(event) => handleClaimSubmit(event, redemption)}>
+                        <p className="stamp-claim-hint">{getClaimHint(reward)}</p>
                         {reward.type === 'physical' && (
                           <>
                             <input placeholder="Nama penerima" value={claimDetails.fullName} onChange={(event) => setClaimDetails({ ...claimDetails, fullName: event.target.value })} />

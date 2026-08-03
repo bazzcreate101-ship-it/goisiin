@@ -41,6 +41,13 @@ const initialCategories = [
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 const cleanAdminText = (value, limit = 160) => String(value ?? '').trim().replace(/[<>`{}]/g, '').slice(0, limit);
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
+const stampRedemptionStatusLabels = {
+  pending_prize: 'Menunggu hadiah',
+  prize_assigned: 'Hadiah siap reveal',
+  claimed: 'Klaim masuk',
+  fulfilled: 'Selesai',
+  rejected: 'Ditolak',
+};
 
 function mergeUsers(...userLists) {
   const usersByEmail = new Map();
@@ -1230,7 +1237,13 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                       ) : stampRedemptions.map((r) => (
                         <tr key={r.id}>
                           <td>{r.userEmail}<br /><small>{r.id}</small></td>
-                          <td><span className="badge bg-success">{r.status}</span></td>
+                          <td>
+                            <span className={`stamp-status stamp-status--${r.status}`}>
+                              {stampRedemptionStatusLabels[r.status] || r.status}
+                            </span>
+                            <br />
+                            <small className="text-secondary">{r.assignedBy ? `Dipilih: ${r.assignedBy}` : 'Belum dipilih'}</small>
+                          </td>
                           <td>
                             <select
                               className="form-select form-select-sm order-input"
