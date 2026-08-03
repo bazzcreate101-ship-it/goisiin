@@ -39,13 +39,13 @@ const initialClaim = {
 const statusCopy = {
   pending_prize: {
     label: 'Menunggu hadiah',
-    title: 'Admin sedang menentukan hadiah',
-    description: 'Set stamp sudah diterima sistem. Admin akan memilih hadiah, lalu tombol reveal/spin akan muncul di halaman ini.',
+    title: 'Hadiah sedang disiapkan',
+    description: 'Set stamp sudah diterima sistem. Tombol reveal/spin akan muncul setelah hadiah siap dibuka.',
     step: 2,
   },
   prize_assigned: {
     label: 'Siap reveal',
-    title: 'Hadiah sudah dipilih admin',
+    title: 'Hadiah siap dibuka',
     description: 'Tekan tombol spin untuk membuka hadiah. Setelah hadiah muncul, lengkapi form klaim sesuai tipe hadiah.',
     step: 3,
   },
@@ -96,10 +96,40 @@ function getRedemptionCopy(status) {
 
 function getClaimHint(reward) {
   if (!reward) return '';
-  if (reward.type === 'physical') return 'Isi nama penerima, nomor HP, dan alamat lengkap untuk pengiriman barang.';
+  if (reward.type === 'physical') return 'Lengkapi data pengiriman supaya hadiah bisa diproses.';
   if (reward.type === 'wallet_balance') return 'Isi provider dan nomor e-wallet aktif agar saldo bisa diproses.';
   if (reward.type === 'voucher_code') return 'Kode voucher akan tampil langsung setelah diaktifkan.';
   return '';
+}
+
+function hasClaimDetails(redemption) {
+  if (!redemption?.claimDetails) return false;
+  const details = redemption.claimDetails;
+  return Boolean(
+    details.fullName
+    || details.phone
+    || details.address
+    || details.walletProvider
+    || details.walletNumber
+  );
+}
+
+function getRewardResultText(redemption, reward) {
+  if (!reward) return '';
+
+  if (redemption.status === 'fulfilled') {
+    if (reward.type === 'voucher_code') return 'Kode voucher sudah aktif dan bisa digunakan.';
+    if (reward.type === 'wallet_balance') return 'Hadiah saldo sudah selesai diproses ke data e-wallet yang kamu isi.';
+    return 'Hadiah sudah selesai diproses sesuai data klaim yang kamu isi.';
+  }
+
+  if (redemption.status === 'claimed' || hasClaimDetails(redemption)) {
+    if (reward.type === 'wallet_balance') return 'Data e-wallet sudah diterima. Hadiah saldo sedang diproses.';
+    if (reward.type === 'voucher_code') return 'Kode voucher sudah disiapkan untuk akun kamu.';
+    return 'Data klaim sudah diterima. Pengiriman barang diproses sesuai data yang kamu isi.';
+  }
+
+  return getClaimHint(reward);
 }
 
 export default function StampView({ user, onLoginOpen, onNavigate }) {
@@ -185,7 +215,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
       reload('Stamp belum lengkap atau belum bisa ditukar.');
       return;
     }
-    reload('6 stamp berhasil ditukar. Tunggu admin menentukan hadiah, lalu buka reveal/spin.');
+    reload('6 stamp berhasil ditukar. Tunggu hadiah siap, lalu buka reveal/spin.');
   };
 
   const handleSpinReveal = (redemption) => {
@@ -400,7 +430,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
               <ol className="stamp-flow-list">
                 <li><strong>Lengkapi 6 stamp unik</strong><span>Stamp 1 sampai 6 harus lengkap.</span></li>
                 <li><strong>Tukar 1 set stamp</strong><span>Stamp dipakai dan masuk antrean admin.</span></li>
-                <li><strong>Reveal hadiah</strong><span>Hadiah dipilih admin, lalu kamu spin untuk membuka hasil.</span></li>
+                <li><strong>Reveal hadiah</strong><span>Saat hadiah siap, tekan spin untuk membuka hasil.</span></li>
                 <li><strong>Isi klaim</strong><span>Alamat untuk barang, nomor e-wallet untuk saldo, atau kode voucher langsung aktif.</span></li>
               </ol>
             </section>
@@ -431,7 +461,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                       <p className="text-secondary mb-2">
                         ID Penukaran: #{redemption.id.slice(-6).toUpperCase()}<br />
                         Dibuat: {redemption.createdAt || '-'}<br />
-                        {redemption.assignedAt && <>Hadiah dipilih: {redemption.assignedAt}<br /></>}
+                        {redemption.assignedAt && <>Reveal siap: {redemption.assignedAt}<br /></>}
                         {redemption.claimedAt && <>Klaim masuk: {redemption.claimedAt}<br /></>}
                         {redemption.updatedAt && <>Update terakhir: {redemption.updatedAt}</>}
                       </p>
@@ -471,7 +501,7 @@ export default function StampView({ user, onLoginOpen, onNavigate }) {
                             <div>
                               <span>{reward.tier}</span>
                               <h3>{reward.name}</h3>
-                              <p>{getClaimHint(reward)}</p>
+                              <p>{getRewardResultText(redemption, reward)}</p>
                               {redemption.voucherCode && (
                                 <code>{redemption.voucherCode}</code>
                               )}
