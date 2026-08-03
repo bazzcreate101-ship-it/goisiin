@@ -36,19 +36,19 @@ export default function Footer({ onNavigate }) {
           
           <div className="col-md-3 col-6 text-start" style={{ marginTop: '20px' }}>
             <h3 className="title-footer2">PETA SITUS</h3>
-            <a className="contact-a faq-body" href="#/page/privacy">Kebijakan Privasi</a><br />
-            <a className="contact-a faq-body" href="#/page/terms">Syarat & Ketentuan</a><br />
-            <a className="contact-a faq-body" href="#/page/disclaimer">Disclaimer</a><br />
+            <a className="contact-a faq-body" href="/page/privacy" onClick={(e) => { e.preventDefault(); onNavigate('page', 'privacy'); }}>Kebijakan Privasi</a><br />
+            <a className="contact-a faq-body" href="/page/terms" onClick={(e) => { e.preventDefault(); onNavigate('page', 'terms'); }}>Syarat & Ketentuan</a><br />
+            <a className="contact-a faq-body" href="/page/disclaimer" onClick={(e) => { e.preventDefault(); onNavigate('page', 'disclaimer'); }}>Disclaimer</a><br />
             <a className="contact-a faq-body" href="https://wa.me/6281388427196" target="_blank" rel="noreferrer">Pendaftaran Mitra / Reseller</a><br />
           </div>
 
           <div className="col-md-3 col-6 text-start" style={{ marginTop: '20px' }}>
             <h3 className="title-footer2">GAME POPULER</h3>
-            <a className="contact-a faq-body" href="#" onClick={(e) => { e.preventDefault(); onNavigate('order', 'mobile-legend'); }}>Top Up Diamond Mobile Legends</a><br />
-            <a className="contact-a faq-body" href="#" onClick={(e) => { e.preventDefault(); onNavigate('order', 'free-fire'); }}>Top Up Diamond Free Fire</a><br />
-            <a className="contact-a faq-body" href="#" onClick={(e) => { e.preventDefault(); onNavigate('order', 'koin-ungu-md'); }}>Top Up Koin Ungu Md</a><br />
-            <a className="contact-a faq-body" href="#" onClick={(e) => { e.preventDefault(); onNavigate('order', 'pubg-mobile'); }}>Top Up UC Pubg Mobile</a><br />
-            <a className="contact-a faq-body" href="#" onClick={(e) => { e.preventDefault(); onNavigate('order', 'valorant'); }}>Top Up Valorant</a><br />
+            <a className="contact-a faq-body" href="/order/mobile-legend" onClick={(e) => { e.preventDefault(); onNavigate('order', 'mobile-legend'); }}>Top Up Diamond Mobile Legends</a><br />
+            <a className="contact-a faq-body" href="/order/free-fire" onClick={(e) => { e.preventDefault(); onNavigate('order', 'free-fire'); }}>Top Up Diamond Free Fire</a><br />
+            <a className="contact-a faq-body" href="/order/koin-ungu-md" onClick={(e) => { e.preventDefault(); onNavigate('order', 'koin-ungu-md'); }}>Top Up Koin Ungu Md</a><br />
+            <a className="contact-a faq-body" href="/order/pubg-mobile" onClick={(e) => { e.preventDefault(); onNavigate('order', 'pubg-mobile'); }}>Top Up UC Pubg Mobile</a><br />
+            <a className="contact-a faq-body" href="/order/valorant" onClick={(e) => { e.preventDefault(); onNavigate('order', 'valorant'); }}>Top Up Valorant</a><br />
           </div>
 
           <div className="col-md-3 col-12 text-start" style={{ marginTop: '20px' }}>

@@ -3,6 +3,7 @@ import Header from './components/Header';
 import SearchPanel from './components/SearchPanel';
 import LoginModal from './components/LoginModal';
 import Footer from './components/Footer';
+import SeoManager from './components/SeoManager';
 import HomeView from './views/HomeView';
 import OrderView from './views/OrderView';
 import InvoiceView from './views/InvoiceView';
@@ -36,6 +37,27 @@ const parseRoute = () => {
   if (isAdminUrl()) return { view: 'admin' };
 
   const hash = window.location.hash || '';
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  const segments = path.split('/').filter(Boolean);
+
+  if (segments[0] === 'order' && segments[1]) {
+    const productId = segments[1] === 'game' ? segments[2] : segments[1];
+    return { view: 'order', productId: decodeURIComponent(productId || '') };
+  }
+  if (segments[0] === 'invoice' && segments[1]) {
+    return { view: 'invoice', invoiceId: decodeURIComponent(segments[1]) };
+  }
+  if (segments[0] === 'transactions') return { view: 'transactions' };
+  if (segments[0] === 'stamp') return { view: 'stamp' };
+  if (segments[0] === 'wallet') return { view: 'wallet' };
+  if (segments[0] === 'vouchers') return { view: 'vouchers' };
+  if (segments[0] === 'blog') return { view: 'page', page: 'blog' };
+  if (segments[0] === 'page') {
+    const allowedPages = ['privacy', 'terms', 'disclaimer'];
+    const page = decodeURIComponent(segments[1] || 'privacy');
+    return { view: 'page', page: allowedPages.includes(page) ? page : 'privacy' };
+  }
+
   if (hash.startsWith('#/order/game/')) {
     return { view: 'order', productId: decodeURIComponent(hash.replace('#/order/game/', '')) };
   }
@@ -66,6 +88,24 @@ const parseRoute = () => {
     return { view: 'page', page: allowedPages.includes(page) ? page : 'privacy' };
   }
   return { view: 'home' };
+};
+
+const routePath = (view, data) => {
+  if (view === 'order' && data) return `/order/${encodeURIComponent(data)}`;
+  if (view === 'invoice' && data?.invoiceId) return `/invoice/${encodeURIComponent(data.invoiceId)}`;
+  if (view === 'transactions') return '/transactions';
+  if (view === 'stamp') return '/stamp';
+  if (view === 'wallet') return '/wallet';
+  if (view === 'vouchers') return '/vouchers';
+  if (view === 'page') return data === 'blog' ? '/blog' : `/page/${encodeURIComponent(data || 'privacy')}`;
+  return '/';
+};
+
+const pushCleanRoute = (view, data) => {
+  const nextPath = routePath(view, data);
+  if (`${window.location.pathname}${window.location.search}` !== nextPath || window.location.hash) {
+    window.history.pushState({}, '', nextPath);
+  }
 };
 
 function App() {
@@ -111,7 +151,7 @@ function App() {
         });
         if (isAdminUrl()) return;
         if (window.location.hash.startsWith('#access_token=')) {
-          window.location.hash = '';
+          window.history.replaceState({}, '', '/');
         }
       } else {
         setUser(null);
@@ -180,6 +220,17 @@ function App() {
   useEffect(() => {
     const checkUrl = () => {
       const route = parseRoute();
+      if (window.location.hash.startsWith('#/') && route.view !== 'home') {
+        const routeData = route.view === 'order'
+          ? route.productId
+          : route.view === 'invoice'
+            ? { invoiceId: route.invoiceId }
+            : route.view === 'page'
+              ? route.page
+              : undefined;
+        window.history.replaceState({}, '', routePath(route.view, routeData));
+      }
+
       if (route.view === 'admin') {
         setCurrentView('admin');
         verifyAdminSession();
@@ -190,7 +241,7 @@ function App() {
         if (!user) {
           setCurrentView('home');
           setIsLoginOpen(true);
-          window.location.hash = '';
+          pushCleanRoute('home');
           return;
         }
         setCurrentView(route.view);
@@ -299,53 +350,53 @@ function App() {
       setActiveProductId(null);
       setActivePage(null);
       setInvoiceData(null);
-      window.location.hash = '';
+      pushCleanRoute('home');
     } else if (view === 'order') {
       if (!data) {
         setCurrentView('home');
-        window.location.hash = '';
+        pushCleanRoute('home');
         return;
       }
       setCurrentView('order');
       setActiveProductId(data);
-      window.location.hash = `#/order/${encodeURIComponent(data)}`;
+      pushCleanRoute('order', data);
     } else if (view === 'invoice') {
       if (!data?.invoiceId) {
         setCurrentView('home');
-        window.location.hash = '';
+        pushCleanRoute('home');
         return;
       }
       setCurrentView('invoice');
       setInvoiceData(data);
-      window.location.hash = `#/invoice/${encodeURIComponent(data.invoiceId)}`;
+      pushCleanRoute('invoice', data);
     } else if (view === 'transactions') {
       if (!user) {
         setIsLoginOpen(true);
         return;
       }
       setCurrentView('transactions');
-      window.location.hash = '#/transactions';
+      pushCleanRoute('transactions');
     } else if (view === 'stamp') {
       setCurrentView('stamp');
-      window.location.hash = '#/stamp';
+      pushCleanRoute('stamp');
     } else if (view === 'wallet') {
       if (!user) {
         setIsLoginOpen(true);
         return;
       }
       setCurrentView('wallet');
-      window.location.hash = '#/wallet';
+      pushCleanRoute('wallet');
     } else if (view === 'vouchers') {
       if (!user) {
         setIsLoginOpen(true);
         return;
       }
       setCurrentView('vouchers');
-      window.location.hash = '#/vouchers';
+      pushCleanRoute('vouchers');
     } else if (view === 'page') {
       setActivePage(data);
       setCurrentView('page');
-      window.location.hash = data === 'blog' ? '#/blog' : `#/page/${encodeURIComponent(data || 'privacy')}`;
+      pushCleanRoute('page', data);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -385,6 +436,13 @@ function App() {
         user={user}
         onLogout={handleLogout}
         onNavigate={handleNavigate}
+      />
+
+      <SeoManager
+        currentView={currentView}
+        activeProductId={activeProductId}
+        activePage={activePage}
+        products={products}
       />
 
       <SearchPanel

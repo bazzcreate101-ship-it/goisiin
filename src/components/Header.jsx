@@ -47,7 +47,7 @@ export default function Header({
         <div className="container col-md-8 col-12 d-flex align-items-center justify-content-between">
           
           {/* BRAND */}
-          <a href="#" onClick={(e) => handleNavClick('home', e)} className="navbar-brand flex-shrink-1 d-flex align-items-center" style={{ textDecoration: 'none' }}>
+          <a href="/" onClick={(e) => handleNavClick('home', e)} className="navbar-brand flex-shrink-1 d-flex align-items-center" style={{ textDecoration: 'none' }}>
             <img src={logo} alt="Goisiinn" className="img-logo" onError={(event) => { event.currentTarget.src = '/gassets/logo.png'; }} />
           </a>
 
@@ -56,7 +56,7 @@ export default function Header({
             <ul className="navbar-nav gv-nav-list ms-lg-0 me-auto mb-0 align-items-lg-stretch">
               <li className="nav-item">
                 <a 
-                  href="#" 
+                  href="/" 
                   onClick={(e) => handleNavClick('home', e)} 
                   className={`nav-link ${currentView === 'home' ? 'active-link' : ''}`}
                 >
@@ -65,7 +65,7 @@ export default function Header({
               </li>
               <li className="nav-item">
                 <a 
-                  href="#" 
+                  href="/transactions" 
                   onClick={(e) => { 
                     e.preventDefault(); 
                     if (isLoggedIn) {
@@ -81,7 +81,7 @@ export default function Header({
               </li>
               <li className="nav-item">
                 <a 
-                  href="#" 
+                  href="/stamp" 
                   onClick={(e) => { 
                     e.preventDefault(); 
                     handleNavClick('stamp', e);
@@ -180,22 +180,22 @@ export default function Header({
                       <div className="dd-actions mt-3">
                         <ul className="dd-list">
                           <li className="dd-item">
-                            <a href="#" onClick={(e) => { e.preventDefault(); handleNavClick('stamp', e); setProfileDropdownOpen(false); }}>
+                            <a href="/stamp" onClick={(e) => { e.preventDefault(); handleNavClick('stamp', e); setProfileDropdownOpen(false); }}>
                               <i className="bx bx-gift me-2"></i> Stamp Saya
                             </a>
                           </li>
                           <li className="dd-item">
-                            <a href="#/wallet" onClick={(e) => { handleNavClick('wallet', e); setProfileDropdownOpen(false); }}>
+                            <a href="/wallet" onClick={(e) => { handleNavClick('wallet', e); setProfileDropdownOpen(false); }}>
                               <i className="bx bx-wallet me-2"></i> Dompet Saya
                             </a>
                           </li>
                           <li className="dd-item">
-                            <a href="#/vouchers" onClick={(e) => { handleNavClick('vouchers', e); setProfileDropdownOpen(false); }}>
+                            <a href="/vouchers" onClick={(e) => { handleNavClick('vouchers', e); setProfileDropdownOpen(false); }}>
                               <i className="bx bx-coupon me-2"></i> Voucher Saya
                             </a>
                           </li>
                           <li className="dd-item logout">
-                            <a href="#" onClick={(e) => { e.preventDefault(); onLogout(); setProfileDropdownOpen(false); }}>
+                            <a href="/" onClick={(e) => { e.preventDefault(); onLogout(); setProfileDropdownOpen(false); }}>
                               <i className="bx bx-log-out me-2"></i> Keluar
                             </a>
                           </li>

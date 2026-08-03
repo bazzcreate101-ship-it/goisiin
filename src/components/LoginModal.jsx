@@ -126,9 +126,9 @@ export default function LoginModal({ isOpen, onClose }) {
 
               <p className="auth-modal__terms">
                 Dengan masuk ke Goisiinn, kamu menyetujui{' '}
-                <a href="#/page/terms">Syarat dan Ketentuan</a>{' '}
+                <a href="/page/terms">Syarat dan Ketentuan</a>{' '}
                 serta{' '}
-                <a href="#/page/privacy">Kebijakan Privasi</a>.
+                <a href="/page/privacy">Kebijakan Privasi</a>.
               </p>
             </section>
           </div>

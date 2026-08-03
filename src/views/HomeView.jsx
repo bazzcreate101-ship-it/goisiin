@@ -58,7 +58,7 @@ export default function HomeView({ products, onSelectProduct, onNavigate }) {
                 {filteredProducts.map(prod => (
                   <div key={prod.id} className="col-6 col-lg-3 mb-3 p-1" style={{ minHeight: '80px' }}>
                     <a
-                      href={`#/order/${prod.id}`}
+                      href={`/order/${prod.id}`}
                       onClick={(e) => handleProductClick(prod.id, e)}
                       style={{ textDecoration: 'none' }}
                     >
@@ -106,7 +106,7 @@ export default function HomeView({ products, onSelectProduct, onNavigate }) {
               Dapatkan 1 stamp acak setiap transaksi sukses minimal Rp{STAMP_MIN_TRANSACTION.toLocaleString('id-ID')}.
               Duplicate bisa dibagikan ke user lain lewat kode redeem.
             </p>
-            <a href="#/stamp" onClick={handleStampClick} className="btn btn-success fw-bold">Mulai Kumpulkan Stamp</a>
+            <a href="/stamp" onClick={handleStampClick} className="btn btn-success fw-bold">Mulai Kumpulkan Stamp</a>
           </div>
           <div className="stamp-home-card__image">
             <img src={stampPosterImage} alt="Promo Stamp Berhadiah" />
@@ -121,12 +121,12 @@ export default function HomeView({ products, onSelectProduct, onNavigate }) {
               <h3>Update terbaru dari Goisiinn</h3>
               <p className="news-section-subtitle">Dapatkan tips, promo, dan highlight komunitas setiap minggunya.</p>
             </div>
-            <a href="#/blog" className="news-section-link">
+            <a href="/blog" onClick={(event) => { event.preventDefault(); onNavigate('page', 'blog'); }} className="news-section-link">
               Lihat semua <span aria-hidden="true">&rarr;</span>
             </a>
           </div>
           <div className="news-card-track">
-            <a href="#/blog" className="news-card">
+            <a href="/blog" onClick={(event) => { event.preventDefault(); onNavigate('page', 'blog'); }} className="news-card">
               <div className="news-card-thumb">
                 <img src={bannerImages[0]} alt="News 1" onError={(event) => { event.currentTarget.src = '/gassets/banner/slide_1.png'; }} />
               </div>
@@ -136,7 +136,7 @@ export default function HomeView({ products, onSelectProduct, onNavigate }) {
                 <span className="news-card-cta">Baca selengkapnya &rarr;</span>
               </div>
             </a>
-            <a href="#/blog" className="news-card">
+            <a href="/blog" onClick={(event) => { event.preventDefault(); onNavigate('page', 'blog'); }} className="news-card">
               <div className="news-card-thumb">
                 <img src={bannerImages[1]} alt="News 2" onError={(event) => { event.currentTarget.src = '/gassets/banner/slide_2.png'; }} />
               </div>
@@ -146,7 +146,7 @@ export default function HomeView({ products, onSelectProduct, onNavigate }) {
                 <span className="news-card-cta">Baca selengkapnya &rarr;</span>
               </div>
             </a>
-            <a href="#/blog" className="news-card">
+            <a href="/blog" onClick={(event) => { event.preventDefault(); onNavigate('page', 'blog'); }} className="news-card">
               <div className="news-card-thumb">
                 <img src={bannerImages[2]} alt="News 3" onError={(event) => { event.currentTarget.src = '/gassets/banner/slide_3.png'; }} />
               </div>
@@ -262,7 +262,7 @@ export default function HomeView({ products, onSelectProduct, onNavigate }) {
               <h2 id="stampPopupTitle">Kumpulkan 6 stamp unik.</h2>
               <p>Belanja minimal Rp{STAMP_MIN_TRANSACTION.toLocaleString('id-ID')} untuk dapat 1 stamp acak. Lengkapi semua stamp dan tukarkan hadiah.</p>
               <div className="stamp-popup-actions">
-              <a href="#/stamp" className="btn btn-success fw-bold" onClick={handleStampClick}>Lihat Promo</a>
+              <a href="/stamp" className="btn btn-success fw-bold" onClick={handleStampClick}>Lihat Promo</a>
                 <button type="button" className="btn btn-outline-success fw-bold" onClick={() => setShowStampPopup(false)}>Nanti dulu</button>
               </div>
             </div>

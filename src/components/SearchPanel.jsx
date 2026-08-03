@@ -72,7 +72,7 @@ export default function SearchPanel({ isOpen, products, onClose, onSelectProduct
                   {results.map(prod => (
                     <li key={prod.id} className="search-item">
                       <a
-                        href={`#/order/${prod.id}`}
+                        href={`/order/${prod.id}`}
                         onClick={(e) => { e.preventDefault(); handleResultClick(prod.id); }}
                         className="d-flex align-items-center"
                       >

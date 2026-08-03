@@ -1,4 +1,10 @@
 User-agent: *
 Allow: /
+Disallow: /bolehnihadmin
+Disallow: /api/
+Disallow: /invoice/
+Disallow: /transactions
+Disallow: /wallet
+Disallow: /vouchers
 
 Sitemap: https://www.goisiinn.com/sitemap.xml

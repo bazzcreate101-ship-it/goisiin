@@ -145,7 +145,7 @@ export default function FlashSale({ onSelectProduct, products = [] }) {
           <div className="flash-sale-track">
             {marqueeItems.map((item, idx) => (
               <a 
-                href={`#/order/${item.productId}`} 
+                href={`/order/${item.productId}`} 
                 className="flash-sale-card" 
                 key={idx} 
                 onClick={(e) => handleCardClick(item.productId, e)}
