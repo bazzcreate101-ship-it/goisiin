@@ -40,6 +40,41 @@ const initialCategories = [
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 const cleanAdminText = (value, limit = 160) => String(value ?? '').trim().replace(/[<>`{}]/g, '').slice(0, limit);
+const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
+
+function mergeUsers(...userLists) {
+  const usersByEmail = new Map();
+
+  userLists.flat().forEach((user) => {
+    const email = cleanAdminText(user?.email || '', 160).toLowerCase();
+    if (!email) return;
+    const existing = usersByEmail.get(email) || {};
+    usersByEmail.set(email, {
+      ...existing,
+      ...user,
+      email,
+      name: cleanAdminText(user?.name || existing.name || email, 120),
+      picture: user?.picture || existing.picture || '',
+      lastLogin: user?.lastLogin || existing.lastLogin || user?.registeredAt || existing.registeredAt || '',
+      registeredAt: user?.registeredAt || existing.registeredAt || '',
+    });
+  });
+
+  return Array.from(usersByEmail.values())
+    .sort((a, b) => String(b.lastLogin || b.registeredAt || '').localeCompare(String(a.lastLogin || a.registeredAt || '')));
+}
+
+async function fetchAuthUsersForAdmin() {
+  const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  if (!token) return [];
+
+  const response = await fetch('/api/admin-users', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok) return [];
+  return Array.isArray(data.users) ? data.users : [];
+}
 
 export default function AdminDashboard({ products, onUpdateProducts, adminUser, onLogout }) {
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'transactions' | 'users' | 'chats'
@@ -75,15 +110,29 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const [adminInput, setAdminInput] = useState('');
   const [adminTyping, setAdminTyping] = useState(false);
 
-  // Load transactions and users from localStorage
+  // Load transactions and users from cloud-backed local cache + Supabase Auth
   useEffect(() => {
-    const loadData = () => {
-      setAdminTransactions(readStorageList('goisiin_transactions'));
-      setAdminUsers(readStorageList('goisiin_users'));
+    let isMounted = true;
+    const loadData = async () => {
+      const transactions = readStorageList('goisiin_transactions');
+      const cachedUsers = readStorageList('goisiin_users');
+      const authUsers = await fetchAuthUsersForAdmin();
+      const mergedUsers = mergeUsers(cachedUsers, authUsers);
+
+      if (!isMounted) return;
+      setAdminTransactions(transactions);
+      setAdminUsers(mergedUsers);
+
+      if (authUsers.length > 0 && JSON.stringify(mergedUsers) !== JSON.stringify(cachedUsers)) {
+        writeStorageList('goisiin_users', mergedUsers);
+      }
     };
     loadData();
-    const timer = setInterval(loadData, 3000);
-    return () => clearInterval(timer);
+    const timer = setInterval(loadData, 7000);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
   }, []);
 
   const handleUpdateTxStatus = (invoiceId, nextStatus) => {

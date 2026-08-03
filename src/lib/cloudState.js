@@ -43,6 +43,32 @@ function writeLocalValue(key, value) {
   localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
 }
 
+function mergeUsers(localUsers, cloudUsers) {
+  const usersByEmail = new Map();
+  [...(Array.isArray(cloudUsers) ? cloudUsers : []), ...(Array.isArray(localUsers) ? localUsers : [])].forEach((user) => {
+    const email = String(user?.email || '').trim().toLowerCase();
+    if (!email) return;
+    const existing = usersByEmail.get(email) || {};
+    usersByEmail.set(email, {
+      ...existing,
+      ...user,
+      email,
+      name: user?.name || existing.name || email,
+      picture: user?.picture || existing.picture || '',
+      lastLogin: user?.lastLogin || existing.lastLogin || user?.registeredAt || existing.registeredAt || '',
+      registeredAt: user?.registeredAt || existing.registeredAt || '',
+    });
+  });
+  return Array.from(usersByEmail.values());
+}
+
+function mergeCloudValue(key, cloudValue) {
+  if (key === 'goisiin_users' && hasLocalValue(key)) {
+    return mergeUsers(readLocalValue(key), cloudValue);
+  }
+  return cloudValue;
+}
+
 export function notifyLocalStateChanged() {
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new CustomEvent('goisiin:cloud-state-updated'));
@@ -95,7 +121,11 @@ export async function hydrateCloudState() {
 
     CLOUD_STATE_KEYS.forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(data.state, key)) {
-        writeLocalValue(key, data.state[key]);
+        const mergedValue = mergeCloudValue(key, data.state[key]);
+        writeLocalValue(key, mergedValue);
+        if (JSON.stringify(mergedValue) !== JSON.stringify(data.state[key])) {
+          seedUpdates[key] = mergedValue;
+        }
         hydrated += 1;
       } else if (hasLocalValue(key)) {
         seedUpdates[key] = readLocalValue(key);
