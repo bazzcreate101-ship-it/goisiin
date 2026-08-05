@@ -59,6 +59,28 @@ const CHAT_SYNC_KEYS = [
   'goisiin_chat_admin_mode',
   'goisiin_chat_active_admin',
 ];
+const ORDER_NOTIFICATION_TEMPLATES = [
+  {
+    id: 'ask_issue',
+    label: 'Tanya kendala',
+    text: 'Kak, apakah ada kendala atau ada yang ingin ditanyakan seputar pesanan ini? Admin Goisiinn siap bantu.',
+  },
+  {
+    id: 'checking_payment',
+    label: 'Cek pembayaran',
+    text: 'Pembayaran pesanan Kakak sedang kami cek. Jika sudah transfer/bayar, mohon tunggu sebentar ya.',
+  },
+  {
+    id: 'processing_order',
+    label: 'Pesanan diproses',
+    text: 'Pesanan Kakak sedang diproses. Admin akan bantu pantau sampai statusnya selesai.',
+  },
+  {
+    id: 'need_data',
+    label: 'Butuh data',
+    text: 'Admin perlu konfirmasi data pesanan Kakak. Mohon balas chat ini agar pesanan bisa dilanjutkan.',
+  },
+];
 const stampRedemptionStatusLabels = {
   pending_prize: 'Menunggu hadiah',
   prize_assigned: 'Hadiah siap reveal',
@@ -1342,9 +1364,28 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                                 style={{ height: '28px', fontSize: '0.74rem' }}
                                 disabled={!t.userEmail}
                                 onClick={() => handleSendTransactionMessage(t)}
+                                title="Kirim popup/notifikasi pesanan ke user"
                               >
-                                Tanya kendala
+                                Kirim Notif
                               </button>
+                              <select
+                                className="form-select form-select-sm order-input py-0"
+                                style={{ width: '132px', fontSize: '0.74rem', height: '28px' }}
+                                defaultValue=""
+                                disabled={!t.userEmail}
+                                onChange={(event) => {
+                                  const template = ORDER_NOTIFICATION_TEMPLATES.find((item) => item.id === event.target.value);
+                                  if (template) {
+                                    handleSendTransactionMessage(t, template.text);
+                                    event.target.value = '';
+                                  }
+                                }}
+                              >
+                                <option value="">Template notif</option>
+                                {ORDER_NOTIFICATION_TEMPLATES.map((template) => (
+                                  <option value={template.id} key={template.id}>{template.label}</option>
+                                ))}
+                              </select>
                               {t.status === 'failed' && (
                                 <button
                                   type="button"
@@ -1360,7 +1401,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                             <div className="input-group input-group-sm">
                               <input
                                 className="form-control order-input"
-                                placeholder="Balasan khusus untuk user..."
+                                placeholder="Tulis notif pesanan khusus..."
                                 value={transactionReplyDrafts[t.invoiceId] || ''}
                                 onChange={(event) => setTransactionReplyDrafts((drafts) => ({
                                   ...drafts,
@@ -1372,10 +1413,14 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                                 className="btn btn-success"
                                 disabled={!t.userEmail || !transactionReplyDrafts[t.invoiceId]?.trim()}
                                 onClick={() => handleSendTransactionMessage(t, transactionReplyDrafts[t.invoiceId])}
+                                title="Kirim sebagai notifikasi popup dan masuk ke chat user"
                               >
-                                Kirim
+                                Kirim Notif
                               </button>
                             </div>
+                            <small className="text-secondary">
+                              Notif muncul di layar user saat dia buka web/login, dan juga masuk ke chat.
+                            </small>
                           </div>
                         </td>
                       </tr>

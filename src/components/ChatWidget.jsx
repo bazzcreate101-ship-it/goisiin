@@ -409,7 +409,9 @@ export default function ChatWidget({ products, user, transactions }) {
           className="chat-admin-notice"
           onClick={() => setIsOpen(true)}
         >
-          <span className="chat-admin-notice__badge">Balasan Admin</span>
+          <span className="chat-admin-notice__badge">
+            {latestAdminMessage.invoiceId ? `Notif Pesanan #${latestAdminMessage.invoiceId}` : 'Balasan Admin'}
+          </span>
           <strong>{latestAdminMessage.agent || 'Admin Goisiinn'}</strong>
           <span>{latestAdminMessage.text}</span>
         </button>
