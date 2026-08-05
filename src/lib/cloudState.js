@@ -78,6 +78,17 @@ function isValidDateString(value) {
   return Boolean(value && !Number.isNaN(new Date(value).getTime()));
 }
 
+function validOrEmpty(value) {
+  return isValidDateString(value) ? value : '';
+}
+
+function newerIso(a, b) {
+  const aTime = isValidDateString(a) ? new Date(a).getTime() : 0;
+  const bTime = isValidDateString(b) ? new Date(b).getTime() : 0;
+  const newer = Math.max(aTime, bTime);
+  return newer > 0 ? new Date(newer).toISOString() : '';
+}
+
 function parseLegacyTime(value) {
   const match = String(value || '').match(/(\d{1,2})[.:](\d{2})/);
   if (!match) return null;
@@ -124,6 +135,8 @@ function normalizeChatMessage(message) {
     text: String(message?.text || '').slice(0, 1200),
     createdAt,
     timestamp: createdAt ? formatChatTime(createdAt) : fallbackTime,
+    invoiceId: message?.invoiceId ? String(message.invoiceId).slice(0, 80) : null,
+    kind: message?.kind ? String(message.kind).slice(0, 40) : 'message',
   };
 }
 
@@ -187,6 +200,9 @@ function mergeChatThreads(localThreads, cloudThreads) {
         adminMode: Boolean(thread.adminMode),
         activeAdmin: thread.activeAdmin || null,
         replacedThreadIds: normalizeReplacedThreadIds(thread.replacedThreadIds),
+        adminLastReadAt: validOrEmpty(thread.adminLastReadAt),
+        userLastReadAt: validOrEmpty(thread.userLastReadAt),
+        lastOrderInvoiceId: thread.lastOrderInvoiceId || null,
         createdAt: thread.createdAt || new Date().toISOString(),
         updatedAt: getThreadUpdatedAt(messages, thread.updatedAt || thread.createdAt || new Date().toISOString()),
       };
@@ -208,6 +224,9 @@ function mergeChatThreads(localThreads, cloudThreads) {
           ...normalizeReplacedThreadIds(existing.replacedThreadIds),
           ...normalizeReplacedThreadIds(normalized.replacedThreadIds),
         ])).slice(0, 10),
+        adminLastReadAt: newerIso(existing.adminLastReadAt, normalized.adminLastReadAt),
+        userLastReadAt: newerIso(existing.userLastReadAt, normalized.userLastReadAt),
+        lastOrderInvoiceId: newer.lastOrderInvoiceId || existing.lastOrderInvoiceId || null,
         createdAt: getOlderDate(existing.createdAt, normalized.createdAt),
         updatedAt: getThreadUpdatedAt(
           mergeChatMessages(existing.messages, normalized.messages),

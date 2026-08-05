@@ -3,7 +3,14 @@ import { paymentChannels } from '../data/products';
 import { STAMP_MIN_TRANSACTION, stampRewards, stampTypes } from '../data/stampRewards';
 import { promoInfo, siteMechanics, supportInfo } from '../data/siteInfo';
 import { getWalletBalance, getWalletEntries, getWithdrawalRequests } from '../lib/walletService';
-import { createChatMessage, getChatIdentity, getChatThread, saveChatThread } from '../lib/chatThreads';
+import {
+  createChatMessage,
+  getChatIdentity,
+  getChatThread,
+  getChatThreadStats,
+  markChatThreadRead,
+  saveChatThread,
+} from '../lib/chatThreads';
 import { hydrateCloudStateKeys } from '../lib/cloudState';
 
 const MAX_MESSAGE_LENGTH = 600;
@@ -25,11 +32,13 @@ export default function ChatWidget({ products, user, transactions }) {
   const [adminMode, setAdminMode] = useState(false);
   const [activeAdmin, setActiveAdmin] = useState(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [currentThread, setCurrentThread] = useState(null);
   const messagesEndRef = useRef(null);
   const chatIdentity = useMemo(() => getChatIdentity(user), [user]);
 
   useEffect(() => {
     const thread = getChatThread(chatIdentity);
+    setCurrentThread(thread);
     setMessages(thread.messages);
     setAdminMode(Boolean(thread.adminMode));
     setActiveAdmin(thread.activeAdmin || null);
@@ -42,19 +51,19 @@ export default function ChatWidget({ products, user, transactions }) {
   }, [chatIdentity]);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
     let cancelled = false;
     const syncChat = async () => {
       await hydrateCloudStateKeys(CHAT_SYNC_KEYS);
       if (!cancelled) {
         const thread = getChatThread(chatIdentity);
+        setCurrentThread(thread);
         setMessages(thread.messages);
         setAdminMode(Boolean(thread.adminMode));
         setActiveAdmin(thread.activeAdmin || null);
       }
     };
     syncChat();
-    const timer = setInterval(syncChat, 4500);
+    const timer = setInterval(syncChat, isOpen ? 4500 : 10000);
     return () => {
       cancelled = true;
       clearInterval(timer);
@@ -64,6 +73,7 @@ export default function ChatWidget({ products, user, transactions }) {
   useEffect(() => {
     const handleStorageChange = () => {
       const thread = getChatThread(chatIdentity);
+      setCurrentThread(thread);
       setMessages(thread.messages);
       setAdminMode(Boolean(thread.adminMode));
       setActiveAdmin(thread.activeAdmin || null);
@@ -79,6 +89,12 @@ export default function ChatWidget({ products, user, transactions }) {
   }, [chatIdentity]);
 
   useEffect(() => {
+    if (!isOpen) return;
+    const marked = markChatThreadRead(chatIdentity.id, 'user');
+    if (marked) setCurrentThread(marked);
+  }, [isOpen, chatIdentity.id, messages.length]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
@@ -88,7 +104,7 @@ export default function ChatWidget({ products, user, transactions }) {
     setAdminMode(newAdminMode);
     setActiveAdmin(newAdmin);
     const existingThread = getChatThread(chatIdentity);
-    saveChatThread({
+    const savedThread = saveChatThread({
       ...existingThread,
       userName: chatIdentity.userName,
       userEmail: chatIdentity.userEmail,
@@ -97,7 +113,12 @@ export default function ChatWidget({ products, user, transactions }) {
       adminMode: newAdminMode,
       activeAdmin: newAdmin || null,
     });
+    setCurrentThread(savedThread);
   };
+
+  const threadStats = getChatThreadStats(currentThread || { messages });
+  const latestAdminMessage = threadStats.lastAdminMessage;
+  const hasUnreadAdminMessage = Boolean(!isOpen && threadStats.unreadForUser && latestAdminMessage);
 
   const buildChatContext = () => {
     const walletBalance = user?.email ? getWalletBalance(user.email) : 0;
@@ -380,6 +401,18 @@ export default function ChatWidget({ products, user, transactions }) {
             </button>
           </form>
         </div>
+      )}
+
+      {hasUnreadAdminMessage && (
+        <button
+          type="button"
+          className="chat-admin-notice"
+          onClick={() => setIsOpen(true)}
+        >
+          <span className="chat-admin-notice__badge">Balasan Admin</span>
+          <strong>{latestAdminMessage.agent || 'Admin Goisiinn'}</strong>
+          <span>{latestAdminMessage.text}</span>
+        </button>
       )}
     </div>
   );

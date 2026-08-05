@@ -18,6 +18,7 @@ import {
   getWalletBalance,
   getWalletLedger,
   getWithdrawalRequests,
+  addWalletEntry,
   settleWalletEffectsForTransaction,
   updateWithdrawalStatus,
 } from '../lib/walletService';
@@ -26,7 +27,14 @@ import {
   hasManagedStock,
   restockLowStockProduct,
 } from '../lib/productStock';
-import { createChatMessage, getChatThreads, getLatestThreadMessage, saveChatThread } from '../lib/chatThreads';
+import {
+  createChatMessage,
+  getChatThreadStats,
+  getChatThreads,
+  getLatestThreadMessage,
+  markChatThreadRead,
+  saveChatThread,
+} from '../lib/chatThreads';
 import { hydrateCloudStateKeys } from '../lib/cloudState';
 
 const initialCategories = [
@@ -144,6 +152,12 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const [activeAdmin, setActiveAdmin] = useState('Ardan'); // 'Ardan' | 'Sarah' | 'Ardian'
   const [adminInput, setAdminInput] = useState('');
   const [adminTyping, setAdminTyping] = useState(false);
+  const [chatFilter, setChatFilter] = useState('all');
+  const [chatSort, setChatSort] = useState('newest');
+  const [transactionReplyDrafts, setTransactionReplyDrafts] = useState({});
+  const [transactionAdminNotice, setTransactionAdminNotice] = useState('');
+  const [walletCreditForm, setWalletCreditForm] = useState({ email: '', amount: '', note: '' });
+  const [walletAdminNotice, setWalletAdminNotice] = useState('');
   const [trafficData, setTrafficData] = useState(null);
   const [trafficLoading, setTrafficLoading] = useState(false);
   const [trafficError, setTrafficError] = useState('');
@@ -290,6 +304,141 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       clearInterval(timer);
     };
   }, [activeTab, selectedChatId]);
+
+  const selectChatThread = (thread) => {
+    if (!thread?.id) return;
+    setSelectedChatId(thread.id);
+    const marked = markChatThreadRead(thread.id, 'admin');
+    if (marked) {
+      const threads = getChatThreads();
+      setChatThreads(threads);
+      setChatMessages(marked.messages || []);
+    }
+  };
+
+  const openUserChatFromEmail = (email) => {
+    const userEmail = cleanAdminText(email || '', 160).toLowerCase();
+    if (!userEmail) return null;
+    const threadId = `user:${userEmail}`;
+    const existing = getChatThreads().find((thread) => thread.id === threadId);
+    return existing || {
+      id: threadId,
+      userName: userEmail,
+      userEmail,
+      isGuest: false,
+      messages: [],
+      adminMode: true,
+      activeAdmin,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      adminLastReadAt: new Date().toISOString(),
+      userLastReadAt: '',
+    };
+  };
+
+  const sendAdminMessageToUser = ({ userEmail, text, invoiceId = null, productName = '' }) => {
+    const safeEmail = cleanAdminText(userEmail || '', 160).toLowerCase();
+    const safeText = cleanAdminText(text, 700);
+    if (!safeEmail || !safeText) return { ok: false, reason: 'Email user atau pesan kosong.' };
+
+    const thread = openUserChatFromEmail(safeEmail);
+    const adminMessage = createChatMessage({
+      id: makeAdminMessageId('msg'),
+      sender: 'cs',
+      agent: activeAdmin,
+      invoiceId,
+      kind: invoiceId ? 'order_followup' : 'admin_message',
+      text: invoiceId
+        ? `Update pesanan #${invoiceId}${productName ? ` (${productName})` : ''}: ${safeText}`
+        : safeText,
+    });
+    const saved = saveChatThread({
+      ...thread,
+      userName: thread.userName || safeEmail,
+      userEmail: safeEmail,
+      isGuest: false,
+      adminMode: true,
+      activeAdmin,
+      messages: [...(thread.messages || []), adminMessage],
+      adminLastReadAt: new Date().toISOString(),
+      lastOrderInvoiceId: invoiceId || thread.lastOrderInvoiceId || null,
+    });
+    const threads = getChatThreads();
+    setChatThreads(threads);
+    setSelectedChatId(saved.id);
+    setChatMessages(saved.messages || []);
+    setAdminMode(true);
+    setTransactionAdminNotice(`Pesan admin terkirim ke ${safeEmail}.`);
+    return { ok: true, thread: saved };
+  };
+
+  const handleSendTransactionMessage = (transaction, customText = '') => {
+    const message = customText || transactionReplyDrafts[transaction.invoiceId] || 'Kak, apakah ada kendala atau ada yang ingin ditanyakan seputar pesanan ini? Admin Goisiinn siap bantu.';
+    const result = sendAdminMessageToUser({
+      userEmail: transaction.userEmail,
+      invoiceId: transaction.invoiceId,
+      productName: transaction.productName,
+      text: message,
+    });
+    if (!result.ok) {
+      setTransactionAdminNotice(result.reason);
+      return;
+    }
+    setTransactionReplyDrafts((drafts) => ({ ...drafts, [transaction.invoiceId]: '' }));
+  };
+
+  const handleManualWalletCredit = (event) => {
+    event.preventDefault();
+    const email = cleanAdminText(walletCreditForm.email, 160).toLowerCase();
+    const amount = Number(walletCreditForm.amount || 0);
+    const note = cleanAdminText(walletCreditForm.note || 'Penyesuaian saldo oleh admin', 180);
+    if (!email || amount <= 0) {
+      setWalletAdminNotice('Email dan nominal saldo wajib valid.');
+      return;
+    }
+    const result = addWalletEntry({
+      userEmail: email,
+      kind: 'admin_credit',
+      delta: amount,
+      note,
+      metadata: { actor: adminActor },
+    });
+    if (!result.ok) {
+      setWalletAdminNotice('Gagal menambahkan saldo. Cek email dan nominal.');
+      return;
+    }
+    setWalletAdminNotice(`Saldo ${formatRupiah(amount)} berhasil ditambahkan ke ${email}.`);
+    setWalletCreditForm({ email: '', amount: '', note: '' });
+    setWalletRefreshKey((key) => key + 1);
+  };
+
+  const handleManualTransactionRefund = (transaction) => {
+    const amount = Number(transaction.refundableAmount || transaction.total || 0);
+    if (!transaction.userEmail || amount <= 0) {
+      setWalletAdminNotice('Refund manual butuh email user dan nominal valid.');
+      return;
+    }
+    const result = addWalletEntry({
+      userEmail: transaction.userEmail,
+      kind: 'manual_failed_refund',
+      delta: amount,
+      invoiceId: transaction.invoiceId,
+      note: `Refund manual pesanan gagal ${transaction.invoiceId}`,
+      metadata: { actor: adminActor, productName: transaction.productName },
+    });
+    setWalletAdminNotice(result.ok
+      ? `Refund manual ${formatRupiah(amount)} masuk ke saldo ${transaction.userEmail}.`
+      : 'Refund manual gagal atau sudah pernah diproses untuk invoice ini.');
+    setWalletRefreshKey((key) => key + 1);
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'chats' || !selectedChatId || chatMessages.length === 0) return;
+    const marked = markChatThreadRead(selectedChatId, 'admin');
+    if (marked) {
+      setChatThreads(getChatThreads());
+    }
+  }, [activeTab, selectedChatId, chatMessages.length]);
 
   const handleSaveChats = (msgs, mode = adminMode, adminName = activeAdmin) => {
     if (!selectedChatId) return;
@@ -532,6 +681,24 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const walletLedger = walletRefreshKey >= 0 ? getWalletLedger() : [];
   const withdrawalRequests = walletRefreshKey >= 0 ? getWithdrawalRequests() : [];
   const adminActor = adminUser?.email || adminUser?.name || 'admin';
+  const chatThreadsWithStats = chatThreads.map((thread) => ({
+    ...thread,
+    stats: getChatThreadStats(thread),
+  }));
+  const displayedChatThreads = chatThreadsWithStats
+    .filter((thread) => {
+      if (chatFilter === 'unread') return thread.stats.unreadForAdmin;
+      if (chatFilter === 'unanswered') return thread.stats.unanswered;
+      if (chatFilter === 'admin') return thread.adminMode;
+      return true;
+    })
+    .sort((a, b) => {
+      const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return chatSort === 'oldest' ? aTime - bTime : bTime - aTime;
+    });
+  const unreadAdminCount = chatThreadsWithStats.filter((thread) => thread.stats.unreadForAdmin).length;
+  const unansweredCount = chatThreadsWithStats.filter((thread) => thread.stats.unanswered).length;
 
   const handleAdminGrantStamp = (e) => {
     e.preventDefault();
@@ -603,7 +770,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
             onClick={() => setActiveTab('chats')}
           >
             💬 Live Chat Hub
-            {adminMode && <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>}
+            {unreadAdminCount > 0 && (
+              <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                {unreadAdminCount}
+              </span>
+            )}
           </button>
           <button
             className={`btn btn-sm ${activeTab === 'stamps' ? 'btn-success' : 'btn-outline-success'}`}
@@ -889,15 +1060,39 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                 <div className="mb-3">
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <label className="form-label text-secondary small mb-0">Percakapan Customer</label>
-                    <span className="badge bg-success">{chatThreads.length}</span>
+                    <span className="badge bg-success">{displayedChatThreads.length}</span>
+                  </div>
+                  <div className="row g-2 mb-2">
+                    <div className="col-7">
+                      <select
+                        className="form-select form-select-sm order-input"
+                        value={chatFilter}
+                        onChange={(event) => setChatFilter(event.target.value)}
+                      >
+                        <option value="all">Semua ({chatThreads.length})</option>
+                        <option value="unread">Belum dibaca ({unreadAdminCount})</option>
+                        <option value="unanswered">Belum dijawab ({unansweredCount})</option>
+                        <option value="admin">Admin mode</option>
+                      </select>
+                    </div>
+                    <div className="col-5">
+                      <select
+                        className="form-select form-select-sm order-input"
+                        value={chatSort}
+                        onChange={(event) => setChatSort(event.target.value)}
+                      >
+                        <option value="newest">Terbaru</option>
+                        <option value="oldest">Terlama</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="d-flex flex-column gap-2" style={{ maxHeight: '260px', overflowY: 'auto' }}>
-                    {chatThreads.length === 0 ? (
+                    {displayedChatThreads.length === 0 ? (
                       <div className="text-secondary small border border-secondary rounded p-2">
                         Belum ada percakapan masuk.
                       </div>
                     ) : (
-                      chatThreads.map((thread) => {
+                      displayedChatThreads.map((thread) => {
                         const latest = getLatestThreadMessage(thread);
                         const isActive = thread.id === selectedChatId;
                         return (
@@ -905,12 +1100,16 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                             type="button"
                             key={thread.id}
                             className={`btn text-start border ${isActive ? 'btn-success border-success' : 'btn-dark border-secondary'}`}
-                            onClick={() => setSelectedChatId(thread.id)}
+                            onClick={() => selectChatThread(thread)}
                             style={{ fontSize: '0.82rem' }}
                           >
                             <div className="d-flex justify-content-between gap-2">
                               <strong className="text-truncate">{thread.userName || 'Pengunjung'}</strong>
-                              {thread.adminMode && <span className="badge bg-danger">Admin</span>}
+                              <span className="d-flex gap-1 flex-wrap justify-content-end">
+                                {thread.stats.unreadForAdmin && <span className="badge bg-warning text-dark">Baru</span>}
+                                {thread.stats.unanswered && <span className="badge bg-info text-dark">Belum dijawab</span>}
+                                {thread.adminMode && <span className="badge bg-danger">Admin</span>}
+                              </span>
                             </div>
                             <div className={isActive ? 'text-white-50 text-truncate' : 'text-secondary text-truncate'}>
                               {thread.userEmail || 'Guest'}
@@ -1029,6 +1228,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
           <>
             <div className="order-card p-3">
               <h5 className="text-success fw-bold mb-3">Daftar Transaksi Customer</h5>
+              {transactionAdminNotice && (
+                <div className="alert alert-info py-2 px-3" style={{ fontSize: '0.84rem' }}>
+                  {transactionAdminNotice}
+                </div>
+              )}
               <div className="table-responsive">
               <table className="table table-dark table-striped table-hover align-middle" style={{ fontSize: '0.85rem' }}>
                 <thead>
@@ -1037,6 +1241,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     <th>Email Pembeli</th>
                     <th>Produk / Nominal</th>
                     <th>ID Game / Nick</th>
+                    <th>Pembayaran</th>
                     <th>Total</th>
                     <th>Tanggal</th>
                     <th>Status</th>
@@ -1046,7 +1251,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                 <tbody>
                   {adminTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="text-center py-4 text-secondary">Belum ada transaksi masuk.</td>
+                      <td colSpan="9" className="text-center py-4 text-secondary">Belum ada transaksi masuk.</td>
                     </tr>
                   ) : (
                     adminTransactions.map(t => (
@@ -1073,7 +1278,31 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                           <div>{t.userId}</div>
                           <div className="text-success" style={{ fontSize: '0.75rem' }}>{t.nick}</div>
                         </td>
-                        <td className="fw-bold text-success">{formatRupiah(t.total)}</td>
+                        <td>
+                          <div className="d-flex align-items-center gap-2">
+                            {t.paymentImage && (
+                              <img
+                                src={t.paymentImage}
+                                alt={t.paymentMethod}
+                                width="34"
+                                height="22"
+                                className="rounded bg-light p-1"
+                                style={{ objectFit: 'contain' }}
+                                onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                              />
+                            )}
+                            <div>
+                              <strong>{t.paymentMethod || '-'}</strong>
+                              <div className="text-secondary" style={{ fontSize: '0.73rem' }}>{t.paymentCategory || '-'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="fw-bold text-success">{formatRupiah(t.total)}</div>
+                          <div className="text-secondary" style={{ fontSize: '0.72rem' }}>
+                            Subtotal {formatRupiah(t.subtotal)} · Fee {formatRupiah(t.fee)}
+                          </div>
+                        </td>
                         <td>{t.createdAt}</td>
                         <td>
                           <span className={`badge ${
@@ -1085,7 +1314,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                           </span>
                         </td>
                         <td>
-                          <div className="d-flex gap-1">
+                          <div className="d-flex flex-column gap-1" style={{ minWidth: '240px' }}>
+                            <div className="d-flex gap-1">
                             <select
                               className="form-select form-select-sm order-input py-0"
                               style={{ width: '110px', fontSize: '0.78rem', height: '28px' }}
@@ -1104,6 +1334,48 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                             >
                               <i className="bi bi-trash-fill"></i>
                             </button>
+                            </div>
+                            <div className="d-flex gap-1">
+                              <button
+                                type="button"
+                                className="btn btn-outline-info btn-sm py-0 px-2"
+                                style={{ height: '28px', fontSize: '0.74rem' }}
+                                disabled={!t.userEmail}
+                                onClick={() => handleSendTransactionMessage(t)}
+                              >
+                                Tanya kendala
+                              </button>
+                              {t.status === 'failed' && (
+                                <button
+                                  type="button"
+                                  className="btn btn-outline-warning btn-sm py-0 px-2"
+                                  style={{ height: '28px', fontSize: '0.74rem' }}
+                                  disabled={!t.userEmail}
+                                  onClick={() => handleManualTransactionRefund(t)}
+                                >
+                                  Refund saldo
+                                </button>
+                              )}
+                            </div>
+                            <div className="input-group input-group-sm">
+                              <input
+                                className="form-control order-input"
+                                placeholder="Balasan khusus untuk user..."
+                                value={transactionReplyDrafts[t.invoiceId] || ''}
+                                onChange={(event) => setTransactionReplyDrafts((drafts) => ({
+                                  ...drafts,
+                                  [t.invoiceId]: event.target.value,
+                                }))}
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-success"
+                                disabled={!t.userEmail || !transactionReplyDrafts[t.invoiceId]?.trim()}
+                                onClick={() => handleSendTransactionMessage(t, transactionReplyDrafts[t.invoiceId])}
+                              >
+                                Kirim
+                              </button>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -1112,6 +1384,58 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                 </tbody>
               </table>
               </div>
+            </div>
+            <div className="order-card p-3 mt-3">
+              <h5 className="text-success fw-bold mb-2">Tambah Saldo Goisiinn Manual</h5>
+              <p className="text-secondary mb-3" style={{ fontSize: '0.84rem' }}>
+                Dipakai admin untuk refund/penyesuaian saldo ketika pembayaran gagal atau ada kendala yang sudah dicek manual.
+              </p>
+              <form className="row g-2 align-items-end" onSubmit={handleManualWalletCredit}>
+                <div className="col-lg-4 col-12">
+                  <label className="form-label text-secondary small">Email user</label>
+                  <input
+                    className="form-control order-input"
+                    type="email"
+                    placeholder="email@contoh.com"
+                    value={walletCreditForm.email}
+                    onChange={(event) => setWalletCreditForm({ ...walletCreditForm, email: event.target.value })}
+                    list="admin-wallet-users"
+                    required
+                  />
+                </div>
+                <div className="col-lg-3 col-12">
+                  <label className="form-label text-secondary small">Nominal saldo</label>
+                  <input
+                    className="form-control order-input"
+                    type="number"
+                    min="1"
+                    placeholder="100000"
+                    value={walletCreditForm.amount}
+                    onChange={(event) => setWalletCreditForm({ ...walletCreditForm, amount: event.target.value })}
+                    required
+                  />
+                </div>
+                <div className="col-lg-3 col-12">
+                  <label className="form-label text-secondary small">Catatan</label>
+                  <input
+                    className="form-control order-input"
+                    placeholder="Refund transaksi gagal"
+                    value={walletCreditForm.note}
+                    onChange={(event) => setWalletCreditForm({ ...walletCreditForm, note: event.target.value })}
+                  />
+                </div>
+                <div className="col-lg-2 col-12">
+                  <button className="btn btn-success w-100 fw-bold" type="submit">Tambah Saldo</button>
+                </div>
+                <datalist id="admin-wallet-users">
+                  {adminUsers.map((userItem) => <option value={userItem.email} key={userItem.email}>{userItem.name}</option>)}
+                </datalist>
+              </form>
+              {walletAdminNotice && (
+                <div className="alert alert-info py-2 px-3 mt-3 mb-0" style={{ fontSize: '0.84rem' }}>
+                  {walletAdminNotice}
+                </div>
+              )}
             </div>
             <div className="order-card p-3 mt-3">
               <h5 className="text-success fw-bold mb-3">Pengajuan Tarik Saldo Goisiinn</h5>

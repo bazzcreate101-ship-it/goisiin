@@ -17,7 +17,15 @@ export function formatChatTime(value = new Date()) {
   }).format(safeDate);
 }
 
-export function createChatMessage({ id, sender = 'cs', agent = null, text = '', createdAt = new Date().toISOString() }) {
+export function createChatMessage({
+  id,
+  sender = 'cs',
+  agent = null,
+  text = '',
+  createdAt = new Date().toISOString(),
+  invoiceId = null,
+  kind = 'message',
+}) {
   return {
     id: String(id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
     sender: sender === 'user' ? 'user' : sender === 'system' ? 'system' : 'cs',
@@ -25,6 +33,8 @@ export function createChatMessage({ id, sender = 'cs', agent = null, text = '', 
     text: String(text || '').slice(0, 1200),
     createdAt,
     timestamp: formatChatTime(createdAt),
+    invoiceId: invoiceId || null,
+    kind,
   };
 }
 
@@ -77,6 +87,9 @@ export function getChatThreads() {
       adminMode: Boolean(thread.adminMode),
       activeAdmin: thread.activeAdmin || null,
       replacedThreadIds: normalizeReplacedThreadIds(thread.replacedThreadIds),
+      adminLastReadAt: validOrEmpty(thread.adminLastReadAt),
+      userLastReadAt: validOrEmpty(thread.userLastReadAt),
+      lastOrderInvoiceId: thread.lastOrderInvoiceId || null,
       updatedAt: getThreadUpdatedAt(thread.messages, thread.updatedAt || thread.createdAt || new Date().toISOString()),
       createdAt: thread.createdAt || new Date().toISOString(),
     }));
@@ -106,11 +119,24 @@ function normalizeMessage(message) {
     text: String(message?.text || '').slice(0, 1200),
     createdAt,
     timestamp: createdAt ? formatChatTime(createdAt) : fallbackTime,
+    invoiceId: message?.invoiceId ? String(message.invoiceId).slice(0, 80) : null,
+    kind: message?.kind ? String(message.kind).slice(0, 40) : 'message',
   };
 }
 
 function isValidDateString(value) {
   return Boolean(value && !Number.isNaN(new Date(value).getTime()));
+}
+
+function validOrEmpty(value) {
+  return isValidDateString(value) ? value : '';
+}
+
+function newerIso(a, b) {
+  const aTime = isValidDateString(a) ? new Date(a).getTime() : 0;
+  const bTime = isValidDateString(b) ? new Date(b).getTime() : 0;
+  const newer = Math.max(aTime, bTime);
+  return newer > 0 ? new Date(newer).toISOString() : '';
 }
 
 function parseLegacyTime(value) {
@@ -192,6 +218,9 @@ function getLegacyChatThread() {
     messages,
     adminMode: Boolean(safeJsonParse(localStorage.getItem(LEGACY_ADMIN_MODE_KEY), false)),
     activeAdmin: localStorage.getItem(LEGACY_ACTIVE_ADMIN_KEY) || null,
+    adminLastReadAt: '',
+    userLastReadAt: '',
+    lastOrderInvoiceId: null,
     createdAt: '2000-01-01T00:00:00.000Z',
     updatedAt: latest?.createdAt || new Date(946684800000 + legacyLatestMinute * 60000).toISOString(),
   };
@@ -225,6 +254,9 @@ export function mergeChatThreads(localThreads = [], incomingThreads = []) {
           adminMode: Boolean(thread.adminMode),
           activeAdmin: thread.activeAdmin || null,
           replacedThreadIds: normalizeReplacedThreadIds(thread.replacedThreadIds),
+          adminLastReadAt: validOrEmpty(thread.adminLastReadAt),
+          userLastReadAt: validOrEmpty(thread.userLastReadAt),
+          lastOrderInvoiceId: thread.lastOrderInvoiceId || null,
           updatedAt: threadUpdatedAt,
           createdAt: thread.createdAt || new Date().toISOString(),
         });
@@ -250,6 +282,9 @@ export function mergeChatThreads(localThreads = [], incomingThreads = []) {
           ...normalizeReplacedThreadIds(existing.replacedThreadIds),
           ...normalizeReplacedThreadIds(thread.replacedThreadIds),
         ])).slice(0, 10),
+        adminLastReadAt: newerIso(existing.adminLastReadAt, thread.adminLastReadAt),
+        userLastReadAt: newerIso(existing.userLastReadAt, thread.userLastReadAt),
+        lastOrderInvoiceId: newer.lastOrderInvoiceId || existing.lastOrderInvoiceId || null,
         createdAt: getOlderDate(existing.createdAt, thread.createdAt),
         updatedAt: getThreadUpdatedAt(mergedMessages, newer.updatedAt || existing.updatedAt || new Date().toISOString()),
       });
@@ -277,6 +312,9 @@ function promoteGuestThreadToUser(identity, threads) {
     messages: mergedMessages.length > 0 ? mergedMessages : [createInitialChatMessage()],
     adminMode: Boolean(userThread?.adminMode ?? guestThread.adminMode),
     activeAdmin: userThread?.activeAdmin || guestThread.activeAdmin || null,
+    adminLastReadAt: newerIso(userThread?.adminLastReadAt, guestThread.adminLastReadAt),
+    userLastReadAt: newerIso(userThread?.userLastReadAt, guestThread.userLastReadAt),
+    lastOrderInvoiceId: userThread?.lastOrderInvoiceId || guestThread.lastOrderInvoiceId || null,
     replacedThreadIds: Array.from(new Set([
       ...normalizeReplacedThreadIds(userThread?.replacedThreadIds),
       ...normalizeReplacedThreadIds(guestThread.replacedThreadIds),
@@ -314,6 +352,9 @@ export function getChatThread(identity) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     replacedThreadIds: [],
+    adminLastReadAt: '',
+    userLastReadAt: '',
+    lastOrderInvoiceId: null,
   };
 }
 
@@ -324,6 +365,9 @@ export function saveChatThread(nextThread) {
     ...nextThread,
     messages: normalizedMessages,
     replacedThreadIds: normalizeReplacedThreadIds(nextThread.replacedThreadIds),
+    adminLastReadAt: validOrEmpty(nextThread.adminLastReadAt),
+    userLastReadAt: validOrEmpty(nextThread.userLastReadAt),
+    lastOrderInvoiceId: nextThread.lastOrderInvoiceId || null,
     updatedAt: getThreadUpdatedAt(normalizedMessages, nextThread.updatedAt || now),
     createdAt: nextThread.createdAt || now,
   };
@@ -336,6 +380,8 @@ export function saveChatThread(nextThread) {
       messages: mergeMessages(existingThread.messages, safeThread.messages),
       createdAt: existingThread.createdAt || safeThread.createdAt,
       updatedAt: safeThread.updatedAt,
+      adminLastReadAt: newerIso(existingThread.adminLastReadAt, safeThread.adminLastReadAt),
+      userLastReadAt: newerIso(existingThread.userLastReadAt, safeThread.userLastReadAt),
     }
     : safeThread;
   const nextThreads = mergeChatThreads(
@@ -351,4 +397,50 @@ export function saveChatThread(nextThread) {
 export function getLatestThreadMessage(thread) {
   const messages = Array.isArray(thread?.messages) ? thread.messages : [];
   return messages[messages.length - 1] || null;
+}
+
+export function getLatestAdminMessage(thread) {
+  const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+  return [...messages].reverse().find((message) => (
+    message.sender === 'cs' && message.agent && message.agent !== 'Vindy'
+  )) || null;
+}
+
+export function getChatThreadStats(thread) {
+  const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+  const lastMessage = messages[messages.length - 1] || null;
+  const lastUserMessage = [...messages].reverse().find((message) => message.sender === 'user') || null;
+  const lastAdminMessage = getLatestAdminMessage(thread);
+  const adminLastReadAt = validOrEmpty(thread?.adminLastReadAt);
+  const userLastReadAt = validOrEmpty(thread?.userLastReadAt);
+  const unreadForAdmin = Boolean(
+    lastUserMessage?.createdAt &&
+    (!adminLastReadAt || new Date(lastUserMessage.createdAt).getTime() > new Date(adminLastReadAt).getTime())
+  );
+  const unreadForUser = Boolean(
+    lastAdminMessage?.createdAt &&
+    (!userLastReadAt || new Date(lastAdminMessage.createdAt).getTime() > new Date(userLastReadAt).getTime())
+  );
+  const unanswered = Boolean(
+    lastUserMessage?.createdAt &&
+    (!lastAdminMessage?.createdAt || new Date(lastUserMessage.createdAt).getTime() > new Date(lastAdminMessage.createdAt).getTime())
+  );
+
+  return {
+    lastMessage,
+    lastUserMessage,
+    lastAdminMessage,
+    unreadForAdmin,
+    unreadForUser,
+    unanswered,
+  };
+}
+
+export function markChatThreadRead(threadId, reader = 'admin') {
+  const thread = getChatThreads().find((item) => item.id === threadId);
+  if (!thread) return null;
+  return saveChatThread({
+    ...thread,
+    [reader === 'user' ? 'userLastReadAt' : 'adminLastReadAt']: new Date().toISOString(),
+  });
 }
