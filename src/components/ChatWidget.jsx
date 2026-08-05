@@ -4,9 +4,12 @@ import { STAMP_MIN_TRANSACTION, stampRewards, stampTypes } from '../data/stampRe
 import { promoInfo, siteMechanics, supportInfo } from '../data/siteInfo';
 import { getWalletBalance, getWalletEntries, getWithdrawalRequests } from '../lib/walletService';
 import { getChatIdentity, getChatThread, saveChatThread } from '../lib/chatThreads';
+import { hydrateCloudStateKeys } from '../lib/cloudState';
 
 const MAX_MESSAGE_LENGTH = 600;
 const CLIENT_COOLDOWN_MS = 1800;
+const CHAT_HISTORY_LIMIT = 300;
+const makeMessageId = (prefix = 'msg') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 export default function ChatWidget({ products, user, transactions }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,6 +36,26 @@ export default function ChatWidget({ products, user, transactions }) {
   }, [chatIdentity]);
 
   useEffect(() => {
+    if (!isOpen) return undefined;
+    let cancelled = false;
+    const syncChat = async () => {
+      await hydrateCloudStateKeys(['goisiin_chat_threads']);
+      if (!cancelled) {
+        const thread = getChatThread(chatIdentity);
+        setMessages(thread.messages);
+        setAdminMode(Boolean(thread.adminMode));
+        setActiveAdmin(thread.activeAdmin || null);
+      }
+    };
+    syncChat();
+    const timer = setInterval(syncChat, 4500);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [isOpen, chatIdentity]);
+
+  useEffect(() => {
     const handleStorageChange = () => {
       const thread = getChatThread(chatIdentity);
       setMessages(thread.messages);
@@ -54,7 +77,7 @@ export default function ChatWidget({ products, user, transactions }) {
   }, [messages, isTyping]);
 
   const saveState = (newMsgs, newAdminMode = adminMode, newAdmin = activeAdmin) => {
-    const limitedMessages = newMsgs.slice(-60);
+    const limitedMessages = newMsgs.slice(-CHAT_HISTORY_LIMIT);
     setMessages(limitedMessages);
     setAdminMode(newAdminMode);
     setActiveAdmin(newAdmin);
@@ -169,7 +192,7 @@ export default function ChatWidget({ products, user, transactions }) {
 
   const handoffToAdmin = (baseMessages, text = 'Chat dialihkan ke Admin CS Goisiinn. Kakak sedang terhubung dengan antrean admin.') => {
     const sysMsg = {
-      id: `sys-${Date.now()}`,
+      id: makeMessageId('sys'),
       sender: 'system',
       text,
       timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -185,7 +208,7 @@ export default function ChatWidget({ products, user, transactions }) {
     setCooldownUntil(Date.now() + CLIENT_COOLDOWN_MS);
 
     const userMsg = {
-      id: `msg-${Date.now()}`,
+      id: makeMessageId('msg'),
       sender: 'user',
       text: messageText,
       timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -233,7 +256,7 @@ export default function ChatWidget({ products, user, transactions }) {
       }
 
       const csMsg = {
-        id: `msg-${Date.now()}`,
+        id: makeMessageId('msg'),
         sender: 'cs',
         agent: 'Vindy',
         text: data.reply || 'Ada yang bisa Vindy bantu lagi seputar Goisiinn, Kak?',
@@ -248,7 +271,7 @@ export default function ChatWidget({ products, user, transactions }) {
       }
     } catch (err) {
       const errorMsg = {
-        id: `msg-${Date.now()}`,
+        id: makeMessageId('msg'),
         sender: 'cs',
         agent: 'Vindy',
         text: err.message || 'Maaf Kak, jaringan Vindy sedang terganggu. Coba lagi sebentar atau hubungi admin Goisiinn.',

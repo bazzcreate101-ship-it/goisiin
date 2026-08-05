@@ -57,6 +57,66 @@ function sanitizeValue(value) {
   return null;
 }
 
+function normalizeChatMessage(message) {
+  return {
+    id: cleanText(message?.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, 80),
+    sender: ['user', 'cs', 'system'].includes(message?.sender) ? message.sender : 'cs',
+    agent: cleanText(message?.agent || '', 40) || null,
+    text: cleanText(message?.text || '', 1200),
+    timestamp: cleanText(message?.timestamp || '', 40),
+  };
+}
+
+function mergeChatMessages(left = [], right = []) {
+  const byId = new Map();
+  [...(Array.isArray(left) ? left : []), ...(Array.isArray(right) ? right : [])].forEach((message) => {
+    const normalized = normalizeChatMessage(message);
+    if (normalized.text) byId.set(normalized.id, { ...(byId.get(normalized.id) || {}), ...normalized });
+  });
+  return Array.from(byId.values()).slice(-300);
+}
+
+function mergeChatThreads(existingThreads = [], incomingThreads = []) {
+  const byId = new Map();
+  [...(Array.isArray(existingThreads) ? existingThreads : []), ...(Array.isArray(incomingThreads) ? incomingThreads : [])]
+    .filter((thread) => thread?.id)
+    .forEach((thread) => {
+      const id = cleanText(thread.id, 160);
+      if (!id) return;
+      const normalized = {
+        id,
+        userName: cleanText(thread.userName || 'Pengunjung', 120),
+        userEmail: cleanText(thread.userEmail || '', 160),
+        isGuest: Boolean(thread.isGuest),
+        messages: mergeChatMessages([], thread.messages),
+        adminMode: Boolean(thread.adminMode),
+        activeAdmin: cleanText(thread.activeAdmin || '', 40) || null,
+        createdAt: cleanText(thread.createdAt || new Date().toISOString(), 80),
+        updatedAt: cleanText(thread.updatedAt || thread.createdAt || new Date().toISOString(), 80),
+      };
+      const existing = byId.get(id);
+      if (!existing) {
+        byId.set(id, normalized);
+        return;
+      }
+      const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+      const incomingTime = new Date(normalized.updatedAt || normalized.createdAt || 0).getTime();
+      const newer = incomingTime >= existingTime ? normalized : existing;
+      byId.set(id, {
+        ...existing,
+        ...newer,
+        id,
+        messages: mergeChatMessages(existing.messages, normalized.messages),
+        createdAt: existing.createdAt || normalized.createdAt,
+        updatedAt: newer.updatedAt || existing.updatedAt,
+      });
+    });
+
+  return Array.from(byId.values())
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 300);
+}
+
 async function readState(keys) {
   const selectedKeys = keys.length > 0 ? keys : Array.from(ALLOWED_KEYS);
   const encodedKeys = selectedKeys.map((key) => `"${key.replace(/"/g, '\\"')}"`).join(',');
@@ -77,7 +137,13 @@ async function readState(keys) {
 }
 
 async function writeState(updates) {
-  const rows = Object.entries(updates)
+  const nextUpdates = { ...updates };
+  if (Array.isArray(nextUpdates.goisiin_chat_threads)) {
+    const existing = await readState(['goisiin_chat_threads']);
+    nextUpdates.goisiin_chat_threads = mergeChatThreads(existing.goisiin_chat_threads, nextUpdates.goisiin_chat_threads);
+  }
+
+  const rows = Object.entries(nextUpdates)
     .map(([key, value]) => ({ key: sanitizeKey(key), value: sanitizeValue(value) }))
     .filter((row) => row.key);
 

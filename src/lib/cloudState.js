@@ -62,9 +62,73 @@ function mergeUsers(localUsers, cloudUsers) {
   return Array.from(usersByEmail.values());
 }
 
+function normalizeChatMessage(message) {
+  return {
+    id: String(message?.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    sender: message?.sender === 'user' ? 'user' : message?.sender === 'system' ? 'system' : 'cs',
+    agent: message?.agent || null,
+    text: String(message?.text || '').slice(0, 1200),
+    timestamp: message?.timestamp || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+  };
+}
+
+function mergeChatMessages(left = [], right = []) {
+  const byId = new Map();
+  [...(Array.isArray(left) ? left : []), ...(Array.isArray(right) ? right : [])].forEach((message) => {
+    const normalized = normalizeChatMessage(message);
+    if (normalized.text) byId.set(normalized.id, { ...(byId.get(normalized.id) || {}), ...normalized });
+  });
+  return Array.from(byId.values()).slice(-300);
+}
+
+function mergeChatThreads(localThreads, cloudThreads) {
+  const byId = new Map();
+  [...(Array.isArray(cloudThreads) ? cloudThreads : []), ...(Array.isArray(localThreads) ? localThreads : [])]
+    .filter((thread) => thread?.id)
+    .forEach((thread) => {
+      const id = String(thread.id);
+      const existing = byId.get(id);
+      const normalized = {
+        id,
+        userName: thread.userName || 'Pengunjung',
+        userEmail: thread.userEmail || '',
+        isGuest: Boolean(thread.isGuest),
+        messages: mergeChatMessages([], thread.messages),
+        adminMode: Boolean(thread.adminMode),
+        activeAdmin: thread.activeAdmin || null,
+        createdAt: thread.createdAt || new Date().toISOString(),
+        updatedAt: thread.updatedAt || thread.createdAt || new Date().toISOString(),
+      };
+
+      if (!existing) {
+        byId.set(id, normalized);
+        return;
+      }
+
+      const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+      const incomingTime = new Date(normalized.updatedAt || normalized.createdAt || 0).getTime();
+      const newer = incomingTime >= existingTime ? normalized : existing;
+      byId.set(id, {
+        ...existing,
+        ...newer,
+        id,
+        messages: mergeChatMessages(existing.messages, normalized.messages),
+        createdAt: existing.createdAt || normalized.createdAt,
+        updatedAt: newer.updatedAt || existing.updatedAt,
+      });
+    });
+
+  return Array.from(byId.values())
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 300);
+}
+
 function mergeCloudValue(key, cloudValue) {
   if (key === 'goisiin_users' && hasLocalValue(key)) {
     return mergeUsers(readLocalValue(key), cloudValue);
+  }
+  if (key === 'goisiin_chat_threads' && hasLocalValue(key)) {
+    return mergeChatThreads(readLocalValue(key), cloudValue);
   }
   return cloudValue;
 }
@@ -136,6 +200,44 @@ export async function hydrateCloudState() {
     if (seeded > 0) await postCloudState(seedUpdates);
     if (hydrated > 0) notifyLocalStateChanged();
 
+    return { ok: true, hydrated, seeded };
+  } catch {
+    return { ok: false, hydrated: 0, seeded: 0 };
+  }
+}
+
+export async function hydrateCloudStateKeys(keys) {
+  const selectedKeys = (Array.isArray(keys) ? keys : [])
+    .filter((key) => CLOUD_STATE_KEYS.includes(key));
+  if (!cloudSyncEnabled || selectedKeys.length === 0) return { ok: false, hydrated: 0, seeded: 0 };
+
+  try {
+    const response = await fetch(`/api/cloud-state?keys=${encodeURIComponent(selectedKeys.join(','))}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 503 || data.disabled) {
+      cloudSyncEnabled = false;
+      return { ok: false, disabled: true, hydrated: 0, seeded: 0 };
+    }
+    if (!response.ok || !data.state) return { ok: false, hydrated: 0, seeded: 0 };
+
+    let hydrated = 0;
+    const seedUpdates = {};
+    selectedKeys.forEach((key) => {
+      if (!Object.prototype.hasOwnProperty.call(data.state, key)) return;
+      const mergedValue = mergeCloudValue(key, data.state[key]);
+      writeLocalValue(key, mergedValue);
+      if (JSON.stringify(mergedValue) !== JSON.stringify(data.state[key])) {
+        seedUpdates[key] = mergedValue;
+      }
+      hydrated += 1;
+    });
+
+    const seeded = Object.keys(seedUpdates).length;
+    if (seeded > 0) await postCloudState(seedUpdates);
+    if (hydrated > 0) notifyLocalStateChanged();
     return { ok: true, hydrated, seeded };
   } catch {
     return { ok: false, hydrated: 0, seeded: 0 };
