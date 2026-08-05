@@ -87,6 +87,16 @@ function parseLegacyTime(value) {
   return hour * 60 + minute;
 }
 
+function inferCreatedAtFromMessageId(id) {
+  const match = String(id || '').match(/(?:msg|sys|init)-(\d{12,})/);
+  if (!match) return '';
+  const time = Number(match[1]);
+  const min = new Date('2024-01-01T00:00:00.000Z').getTime();
+  const max = Date.now() + 366 * 24 * 60 * 60 * 1000;
+  if (!Number.isFinite(time) || time < min || time > max) return '';
+  return new Date(time).toISOString();
+}
+
 function chatMessageSortKey(message, order) {
   if (isValidDateString(message.createdAt)) return new Date(message.createdAt).getTime();
   const legacyMinute = parseLegacyTime(message.timestamp);
@@ -94,8 +104,16 @@ function chatMessageSortKey(message, order) {
   return 946684800000 + order;
 }
 
+function normalizeReplacedThreadIds(value) {
+  return Array.isArray(value)
+    ? value.map((id) => String(id || '')).filter(Boolean).slice(0, 10)
+    : [];
+}
+
 function normalizeChatMessage(message) {
-  const createdAt = isValidDateString(message?.createdAt) ? message.createdAt : '';
+  const createdAt = isValidDateString(message?.createdAt)
+    ? message.createdAt
+    : inferCreatedAtFromMessageId(message?.id);
   const fallbackTime = !createdAt && parseLegacyTime(message?.timestamp) !== null
     ? message.timestamp
     : formatChatTime(new Date());
@@ -129,23 +147,48 @@ function mergeChatMessages(left = [], right = []) {
     .map(({ _order, ...message }) => message);
 }
 
+function getThreadUpdatedAt(messages = [], fallback = new Date().toISOString()) {
+  const mergedMessages = Array.isArray(messages) ? mergeChatMessages([], messages) : [];
+  const latest = mergedMessages[mergedMessages.length - 1];
+  if (isValidDateString(latest?.createdAt)) return latest.createdAt;
+  return isValidDateString(fallback) ? fallback : new Date().toISOString();
+}
+
+function getOlderDate(a, b) {
+  const aTime = isValidDateString(a) ? new Date(a).getTime() : Number.POSITIVE_INFINITY;
+  const bTime = isValidDateString(b) ? new Date(b).getTime() : Number.POSITIVE_INFINITY;
+  const older = Math.min(aTime, bTime);
+  return Number.isFinite(older) ? new Date(older).toISOString() : new Date().toISOString();
+}
+
 function mergeChatThreads(localThreads, cloudThreads) {
   const byId = new Map();
-  [...(Array.isArray(cloudThreads) ? cloudThreads : []), ...(Array.isArray(localThreads) ? localThreads : [])]
+  const sourceThreads = [
+    ...(Array.isArray(cloudThreads) ? cloudThreads : []),
+    ...(Array.isArray(localThreads) ? localThreads : []),
+  ];
+  const replacedThreadIds = new Set(
+    sourceThreads.flatMap((thread) => normalizeReplacedThreadIds(thread?.replacedThreadIds)),
+  );
+
+  sourceThreads
     .filter((thread) => thread?.id)
     .forEach((thread) => {
       const id = String(thread.id);
+      if (replacedThreadIds.has(id)) return;
+      const messages = mergeChatMessages([], thread.messages);
       const existing = byId.get(id);
       const normalized = {
         id,
         userName: thread.userName || 'Pengunjung',
         userEmail: thread.userEmail || '',
         isGuest: Boolean(thread.isGuest),
-        messages: mergeChatMessages([], thread.messages),
+        messages,
         adminMode: Boolean(thread.adminMode),
         activeAdmin: thread.activeAdmin || null,
+        replacedThreadIds: normalizeReplacedThreadIds(thread.replacedThreadIds),
         createdAt: thread.createdAt || new Date().toISOString(),
-        updatedAt: thread.updatedAt || thread.createdAt || new Date().toISOString(),
+        updatedAt: getThreadUpdatedAt(messages, thread.updatedAt || thread.createdAt || new Date().toISOString()),
       };
 
       if (!existing) {
@@ -161,12 +204,20 @@ function mergeChatThreads(localThreads, cloudThreads) {
         ...newer,
         id,
         messages: mergeChatMessages(existing.messages, normalized.messages),
-        createdAt: existing.createdAt || normalized.createdAt,
-        updatedAt: newer.updatedAt || existing.updatedAt,
+        replacedThreadIds: Array.from(new Set([
+          ...normalizeReplacedThreadIds(existing.replacedThreadIds),
+          ...normalizeReplacedThreadIds(normalized.replacedThreadIds),
+        ])).slice(0, 10),
+        createdAt: getOlderDate(existing.createdAt, normalized.createdAt),
+        updatedAt: getThreadUpdatedAt(
+          mergeChatMessages(existing.messages, normalized.messages),
+          newer.updatedAt || existing.updatedAt,
+        ),
       });
     });
 
   return Array.from(byId.values())
+    .filter((thread) => !replacedThreadIds.has(thread.id))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 300);
 }
