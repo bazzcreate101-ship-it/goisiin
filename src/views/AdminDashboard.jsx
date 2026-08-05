@@ -26,7 +26,7 @@ import {
   hasManagedStock,
   restockLowStockProduct,
 } from '../lib/productStock';
-import { getChatThreads, getLatestThreadMessage, saveChatThread } from '../lib/chatThreads';
+import { createChatMessage, getChatThreads, getLatestThreadMessage, saveChatThread } from '../lib/chatThreads';
 import { hydrateCloudStateKeys } from '../lib/cloudState';
 
 const initialCategories = [
@@ -45,6 +45,12 @@ const formatNumber = (num) => new Intl.NumberFormat('id-ID').format(Number(num |
 const cleanAdminText = (value, limit = 160) => String(value ?? '').trim().replace(/[<>`{}]/g, '').slice(0, limit);
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
 const makeAdminMessageId = (prefix = 'msg') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+const CHAT_SYNC_KEYS = [
+  'goisiin_chat_threads',
+  'goisiin_chat_messages',
+  'goisiin_chat_admin_mode',
+  'goisiin_chat_active_admin',
+];
 const stampRedemptionStatusLabels = {
   pending_prize: 'Menunggu hadiah',
   prize_assigned: 'Hadiah siap reveal',
@@ -263,7 +269,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     if (activeTab !== 'chats') return undefined;
     let cancelled = false;
     const syncChats = async () => {
-      await hydrateCloudStateKeys(['goisiin_chat_threads']);
+      await hydrateCloudStateKeys(CHAT_SYNC_KEYS);
       if (cancelled) return;
       const threads = getChatThreads();
       setChatThreads(threads);
@@ -304,7 +310,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     const threads = getChatThreads();
     setChatThreads(threads);
     setSelectedChatId(savedThread.id);
-    setChatMessages(safeMessages);
+    setChatMessages(savedThread.messages || safeMessages);
     setAdminMode(mode);
     setActiveAdmin(adminName);
   };
@@ -324,13 +330,12 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       setAdminTyping(false);
       const latestThread = getChatThreads().find((thread) => thread.id === selectedChatId);
       const baseMessages = latestThread?.messages || chatMessages;
-      const adminMsg = {
+      const adminMsg = createChatMessage({
         id: makeAdminMessageId('msg'),
         sender: 'cs',
         agent: activeAdmin,
         text: textToSend,
-        timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-      };
+      });
 
       const updated = [...baseMessages, adminMsg];
       handleSaveChats(updated, true, activeAdmin);
@@ -342,14 +347,13 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     const nextMode = !adminMode;
     const latestThread = getChatThreads().find((thread) => thread.id === selectedChatId);
     const baseMessages = latestThread?.messages || chatMessages;
-    const sysMsg = {
+    const sysMsg = createChatMessage({
       id: makeAdminMessageId('sys'),
       sender: 'system',
       text: nextMode
         ? `Chat dialihkan sepenuhnya ke Admin ${activeAdmin}. AI Vindy dinonaktifkan.`
         : 'Chat dialihkan kembali ke AI Vindy. Admin keluar.',
-      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-    };
+    });
     handleSaveChats([...baseMessages, sysMsg], nextMode, activeAdmin);
   };
 

@@ -3,12 +3,18 @@ import { paymentChannels } from '../data/products';
 import { STAMP_MIN_TRANSACTION, stampRewards, stampTypes } from '../data/stampRewards';
 import { promoInfo, siteMechanics, supportInfo } from '../data/siteInfo';
 import { getWalletBalance, getWalletEntries, getWithdrawalRequests } from '../lib/walletService';
-import { getChatIdentity, getChatThread, saveChatThread } from '../lib/chatThreads';
+import { createChatMessage, getChatIdentity, getChatThread, saveChatThread } from '../lib/chatThreads';
 import { hydrateCloudStateKeys } from '../lib/cloudState';
 
 const MAX_MESSAGE_LENGTH = 600;
 const CLIENT_COOLDOWN_MS = 1800;
 const CHAT_HISTORY_LIMIT = 300;
+const CHAT_SYNC_KEYS = [
+  'goisiin_chat_threads',
+  'goisiin_chat_messages',
+  'goisiin_chat_admin_mode',
+  'goisiin_chat_active_admin',
+];
 const makeMessageId = (prefix = 'msg') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 export default function ChatWidget({ products, user, transactions }) {
@@ -39,7 +45,7 @@ export default function ChatWidget({ products, user, transactions }) {
     if (!isOpen) return undefined;
     let cancelled = false;
     const syncChat = async () => {
-      await hydrateCloudStateKeys(['goisiin_chat_threads']);
+      await hydrateCloudStateKeys(CHAT_SYNC_KEYS);
       if (!cancelled) {
         const thread = getChatThread(chatIdentity);
         setMessages(thread.messages);
@@ -191,12 +197,11 @@ export default function ChatWidget({ products, user, transactions }) {
   };
 
   const handoffToAdmin = (baseMessages, text = 'Chat dialihkan ke Admin CS Goisiinn. Kakak sedang terhubung dengan antrean admin.') => {
-    const sysMsg = {
+    const sysMsg = createChatMessage({
       id: makeMessageId('sys'),
       sender: 'system',
       text,
-      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-    };
+    });
     saveState([...baseMessages, sysMsg], true, null);
   };
 
@@ -207,12 +212,11 @@ export default function ChatWidget({ products, user, transactions }) {
 
     setCooldownUntil(Date.now() + CLIENT_COOLDOWN_MS);
 
-    const userMsg = {
+    const userMsg = createChatMessage({
       id: makeMessageId('msg'),
       sender: 'user',
       text: messageText,
-      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-    };
+    });
 
     const updatedMsgs = [...messages, userMsg];
     saveState(updatedMsgs);
@@ -255,13 +259,12 @@ export default function ChatWidget({ products, user, transactions }) {
         throw new Error(data.error || 'Chat sedang dibatasi.');
       }
 
-      const csMsg = {
+      const csMsg = createChatMessage({
         id: makeMessageId('msg'),
         sender: 'cs',
         agent: 'Vindy',
         text: data.reply || 'Ada yang bisa Vindy bantu lagi seputar Goisiinn, Kak?',
-        timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-      };
+      });
       const nextMsgs = [...updatedMsgs, csMsg];
 
       if (data.forwardToAdmin) {
@@ -270,13 +273,12 @@ export default function ChatWidget({ products, user, transactions }) {
         saveState(nextMsgs);
       }
     } catch (err) {
-      const errorMsg = {
+      const errorMsg = createChatMessage({
         id: makeMessageId('msg'),
         sender: 'cs',
         agent: 'Vindy',
         text: err.message || 'Maaf Kak, jaringan Vindy sedang terganggu. Coba lagi sebentar atau hubungi admin Goisiinn.',
-        timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-      };
+      });
       saveState([...updatedMsgs, errorMsg]);
     } finally {
       setIsTyping(false);

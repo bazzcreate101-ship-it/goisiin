@@ -1,15 +1,40 @@
 import { readStorageList, safeJsonParse, writeStorageList } from './storage';
 
 export const CHAT_THREADS_KEY = 'goisiin_chat_threads';
+const LEGACY_CHAT_KEY = 'goisiin_chat_messages';
+const LEGACY_ADMIN_MODE_KEY = 'goisiin_chat_admin_mode';
+const LEGACY_ACTIVE_ADMIN_KEY = 'goisiin_chat_active_admin';
+
+export function formatChatTime(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(safeDate);
+}
+
+export function createChatMessage({ id, sender = 'cs', agent = null, text = '', createdAt = new Date().toISOString() }) {
+  return {
+    id: String(id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    sender: sender === 'user' ? 'user' : sender === 'system' ? 'system' : 'cs',
+    agent: agent || null,
+    text: String(text || '').slice(0, 1200),
+    createdAt,
+    timestamp: formatChatTime(createdAt),
+  };
+}
 
 export function createInitialChatMessage() {
-  return {
+  return createChatMessage({
     id: 'init-1',
     sender: 'cs',
     agent: 'Vindy',
     text: 'Halo Kak! Selamat datang di Goisiinn. Vindy siap bantu soal produk, harga, pembayaran, promo, transaksi, dan bantuan CS.',
-    timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-  };
+  });
 }
 
 export function getChatIdentity(user) {
@@ -37,43 +62,100 @@ export function getChatIdentity(user) {
 }
 
 export function getChatThreads() {
-  return readStorageList(CHAT_THREADS_KEY)
+  const threads = readStorageList(CHAT_THREADS_KEY)
     .filter((thread) => thread?.id)
     .map((thread) => ({
       id: String(thread.id),
       userName: thread.userName || 'Pengunjung',
       userEmail: thread.userEmail || '',
       isGuest: Boolean(thread.isGuest),
-      messages: Array.isArray(thread.messages) ? thread.messages.slice(-300) : [],
+      messages: mergeMessages([], thread.messages),
       adminMode: Boolean(thread.adminMode),
       activeAdmin: thread.activeAdmin || null,
       updatedAt: thread.updatedAt || thread.createdAt || new Date().toISOString(),
       createdAt: thread.createdAt || new Date().toISOString(),
-    }))
+    }));
+
+  const legacyThread = getLegacyChatThread();
+  const merged = legacyThread && !threads.some((thread) => thread.id === legacyThread.id)
+    ? [...threads, legacyThread]
+    : threads;
+
+  return merged
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
 function normalizeMessage(message) {
+  const createdAt = isValidDateString(message?.createdAt) ? message.createdAt : '';
+  const fallbackTime = !createdAt && parseLegacyTime(message?.timestamp) !== null
+    ? message.timestamp
+    : formatChatTime(new Date());
   return {
     id: String(message?.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
     sender: message?.sender === 'user' ? 'user' : message?.sender === 'system' ? 'system' : 'cs',
     agent: message?.agent || null,
     text: String(message?.text || '').slice(0, 1200),
-    timestamp: message?.timestamp || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    createdAt,
+    timestamp: createdAt ? formatChatTime(createdAt) : fallbackTime,
   };
+}
+
+function isValidDateString(value) {
+  return Boolean(value && !Number.isNaN(new Date(value).getTime()));
+}
+
+function parseLegacyTime(value) {
+  const match = String(value || '').match(/(\d{1,2})[.:](\d{2})/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+function messageSortKey(message, order) {
+  if (isValidDateString(message.createdAt)) return new Date(message.createdAt).getTime();
+  const legacyMinute = parseLegacyTime(message.timestamp);
+  if (legacyMinute !== null) return 946684800000 + legacyMinute * 60000 + order;
+  return 946684800000 + order;
 }
 
 function mergeMessages(left = [], right = []) {
   const byId = new Map();
-  [...left, ...right].forEach((message) => {
+  [...(Array.isArray(left) ? left : []), ...(Array.isArray(right) ? right : [])].forEach((message, index) => {
     const normalized = normalizeMessage(message);
     if (!normalized.text) return;
+    const existing = byId.get(normalized.id) || {};
     byId.set(normalized.id, {
-      ...(byId.get(normalized.id) || {}),
+      ...existing,
       ...normalized,
+      createdAt: normalized.createdAt || existing.createdAt || '',
+      _order: existing._order ?? index,
     });
   });
-  return Array.from(byId.values()).slice(-300);
+  return Array.from(byId.values())
+    .sort((a, b) => messageSortKey(a, a._order || 0) - messageSortKey(b, b._order || 0))
+    .slice(-300)
+    .map(({ _order, ...message }) => message);
+}
+
+function getLegacyChatThread() {
+  const legacyMessages = safeJsonParse(localStorage.getItem(LEGACY_CHAT_KEY), []);
+  if (!Array.isArray(legacyMessages) || legacyMessages.length === 0) return null;
+  const messages = mergeMessages([], legacyMessages);
+  const latest = messages[messages.length - 1];
+  const legacyLatestMinute = parseLegacyTime(latest?.timestamp) || 0;
+  return {
+    id: 'legacy:browser-chat',
+    userName: 'Chat lama perangkat ini',
+    userEmail: '',
+    isGuest: true,
+    messages,
+    adminMode: Boolean(safeJsonParse(localStorage.getItem(LEGACY_ADMIN_MODE_KEY), false)),
+    activeAdmin: localStorage.getItem(LEGACY_ACTIVE_ADMIN_KEY) || null,
+    createdAt: '2000-01-01T00:00:00.000Z',
+    updatedAt: latest?.createdAt || new Date(946684800000 + legacyLatestMinute * 60000).toISOString(),
+  };
 }
 
 export function mergeChatThreads(localThreads = [], incomingThreads = []) {
@@ -128,9 +210,9 @@ export function getChatThread(identity) {
   const existing = threads.find((thread) => thread.id === identity.id);
   if (existing) return existing;
 
-  const legacyMessages = safeJsonParse(localStorage.getItem('goisiin_chat_messages'), []);
-  const legacyAdminMode = safeJsonParse(localStorage.getItem('goisiin_chat_admin_mode'), false);
-  const legacyAdmin = localStorage.getItem('goisiin_chat_active_admin') || null;
+  const legacyMessages = safeJsonParse(localStorage.getItem(LEGACY_CHAT_KEY), []);
+  const legacyAdminMode = safeJsonParse(localStorage.getItem(LEGACY_ADMIN_MODE_KEY), false);
+  const legacyAdmin = localStorage.getItem(LEGACY_ACTIVE_ADMIN_KEY) || null;
   const canUseLegacy = threads.length === 0 && Array.isArray(legacyMessages) && legacyMessages.length > 0;
   const initialMessages = canUseLegacy ? legacyMessages.slice(-300) : [createInitialChatMessage()];
 
@@ -173,7 +255,7 @@ export function saveChatThread(nextThread) {
 
   writeStorageList(CHAT_THREADS_KEY, nextThreads);
   window.dispatchEvent(new CustomEvent('goisiin:chat-threads-updated'));
-  return safeThread;
+  return mergedThread;
 }
 
 export function getLatestThreadMessage(thread) {

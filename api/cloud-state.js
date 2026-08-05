@@ -57,23 +57,71 @@ function sanitizeValue(value) {
   return null;
 }
 
+function formatChatTime(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(safeDate);
+}
+
+function isValidDateString(value) {
+  return Boolean(value && !Number.isNaN(new Date(value).getTime()));
+}
+
+function parseLegacyTime(value) {
+  const match = String(value || '').match(/(\d{1,2})[.:](\d{2})/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+function chatMessageSortKey(message, order) {
+  if (isValidDateString(message.createdAt)) return new Date(message.createdAt).getTime();
+  const legacyMinute = parseLegacyTime(message.timestamp);
+  if (legacyMinute !== null) return 946684800000 + legacyMinute * 60000 + order;
+  return 946684800000 + order;
+}
+
 function normalizeChatMessage(message) {
+  const createdAt = isValidDateString(message?.createdAt) ? message.createdAt : '';
+  const fallbackTime = !createdAt && parseLegacyTime(message?.timestamp) !== null
+    ? cleanText(message.timestamp, 40)
+    : formatChatTime(new Date());
   return {
     id: cleanText(message?.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, 80),
     sender: ['user', 'cs', 'system'].includes(message?.sender) ? message.sender : 'cs',
     agent: cleanText(message?.agent || '', 40) || null,
     text: cleanText(message?.text || '', 1200),
-    timestamp: cleanText(message?.timestamp || '', 40),
+    createdAt: cleanText(createdAt, 80),
+    timestamp: cleanText(createdAt ? formatChatTime(createdAt) : fallbackTime, 40),
   };
 }
 
 function mergeChatMessages(left = [], right = []) {
   const byId = new Map();
-  [...(Array.isArray(left) ? left : []), ...(Array.isArray(right) ? right : [])].forEach((message) => {
+  [...(Array.isArray(left) ? left : []), ...(Array.isArray(right) ? right : [])].forEach((message, index) => {
     const normalized = normalizeChatMessage(message);
-    if (normalized.text) byId.set(normalized.id, { ...(byId.get(normalized.id) || {}), ...normalized });
+    const existing = byId.get(normalized.id) || {};
+    if (normalized.text) {
+      byId.set(normalized.id, {
+        ...existing,
+        ...normalized,
+        createdAt: normalized.createdAt || existing.createdAt || '',
+        _order: existing._order ?? index,
+      });
+    }
   });
-  return Array.from(byId.values()).slice(-300);
+  return Array.from(byId.values())
+    .sort((a, b) => chatMessageSortKey(a, a._order || 0) - chatMessageSortKey(b, b._order || 0))
+    .slice(-300)
+    .map(({ _order, ...message }) => message);
 }
 
 function mergeChatThreads(existingThreads = [], incomingThreads = []) {
