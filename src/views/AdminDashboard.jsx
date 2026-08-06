@@ -19,6 +19,7 @@ import {
   getWalletLedger,
   getWithdrawalRequests,
   addWalletEntry,
+  adjustWalletBalance,
   settleWalletEffectsForTransaction,
   updateWithdrawalStatus,
 } from '../lib/walletService';
@@ -29,6 +30,8 @@ import {
 } from '../lib/productStock';
 import {
   createChatMessage,
+  deleteChatMessage,
+  editChatMessage,
   getChatThreadStats,
   getChatThreads,
   getLatestThreadMessage,
@@ -182,12 +185,16 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const [activeAdmin, setActiveAdmin] = useState('Ardan'); // 'Ardan' | 'Sarah' | 'Ardian'
   const [adminInput, setAdminInput] = useState('');
   const [adminTyping, setAdminTyping] = useState(false);
+  const [editingChatMessageId, setEditingChatMessageId] = useState(null);
+  const [editingChatMessageText, setEditingChatMessageText] = useState('');
   const [chatFilter, setChatFilter] = useState('all');
   const [chatSort, setChatSort] = useState('newest');
   const [transactionReplyDrafts, setTransactionReplyDrafts] = useState({});
   const [transactionAdminNotice, setTransactionAdminNotice] = useState('');
-  const [walletCreditForm, setWalletCreditForm] = useState({ email: '', amount: '', note: '' });
+  const [walletCreditForm, setWalletCreditForm] = useState({ email: '', amount: '', direction: 'credit', note: '' });
   const [walletAdminNotice, setWalletAdminNotice] = useState('');
+  const [editingTransactionId, setEditingTransactionId] = useState(null);
+  const [transactionEditForm, setTransactionEditForm] = useState({});
   const [trafficData, setTrafficData] = useState(null);
   const [trafficLoading, setTrafficLoading] = useState(false);
   const [trafficError, setTrafficError] = useState('');
@@ -453,19 +460,21 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       setWalletAdminNotice('Email dan nominal saldo wajib valid.');
       return;
     }
-    const result = addWalletEntry({
+    const result = adjustWalletBalance({
       userEmail: email,
-      kind: 'admin_credit',
-      delta: amount,
+      amount,
+      direction: walletCreditForm.direction,
       note,
-      metadata: { actor: adminActor },
+      actor: adminActor,
     });
     if (!result.ok) {
-      setWalletAdminNotice('Gagal menambahkan saldo. Cek email dan nominal.');
+      setWalletAdminNotice(result.reason === 'insufficient_balance'
+        ? 'Gagal mengurangi saldo: saldo user tidak cukup.'
+        : 'Gagal memproses saldo. Cek email dan nominal.');
       return;
     }
-    setWalletAdminNotice(`Saldo ${formatRupiah(amount)} berhasil ditambahkan ke ${email}.`);
-    setWalletCreditForm({ email: '', amount: '', note: '' });
+    setWalletAdminNotice(`Saldo ${formatRupiah(amount)} berhasil ${walletCreditForm.direction === 'debit' ? 'dikurangi dari' : 'ditambahkan ke'} ${email}.`);
+    setWalletCreditForm({ email: '', amount: '', direction: 'credit', note: '' });
     setWalletRefreshKey((key) => key + 1);
   };
 
@@ -487,6 +496,86 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       ? `Refund manual ${formatRupiah(amount)} masuk ke saldo ${transaction.userEmail}.`
       : 'Refund manual gagal atau sudah pernah diproses untuk invoice ini.');
     setWalletRefreshKey((key) => key + 1);
+  };
+
+  const startEditTransaction = (transaction) => {
+    setEditingTransactionId(transaction.invoiceId);
+    setTransactionEditForm({
+      invoiceId: transaction.invoiceId,
+      userEmail: transaction.userEmail || '',
+      userId: transaction.userId || '',
+      nick: transaction.nick || '',
+      productName: transaction.productName || '',
+      denomination: transaction.denomination || '',
+      paymentMethod: transaction.paymentMethod || '',
+      paymentCategory: transaction.paymentCategory || '',
+      subtotal: Number(transaction.subtotal || 0),
+      fee: Number(transaction.fee || 0),
+      total: Number(transaction.total || 0),
+      status: transaction.status || 'pending',
+      createdAt: transaction.createdAt || '',
+    });
+  };
+
+  const cancelEditTransaction = () => {
+    setEditingTransactionId(null);
+    setTransactionEditForm({});
+  };
+
+  const handleSaveTransactionEdit = (originalInvoiceId) => {
+    const safeInvoice = cleanAdminText(transactionEditForm.invoiceId || originalInvoiceId, 80);
+    if (!safeInvoice) {
+      setTransactionAdminNotice('Invoice ID tidak valid.');
+      return;
+    }
+    const updated = adminTransactions.map((transaction) => {
+      if (transaction.invoiceId !== originalInvoiceId) return transaction;
+      return {
+        ...transaction,
+        invoiceId: safeInvoice,
+        userEmail: cleanAdminText(transactionEditForm.userEmail, 160).toLowerCase(),
+        userId: cleanAdminText(transactionEditForm.userId, 160),
+        nick: cleanAdminText(transactionEditForm.nick, 120),
+        productName: cleanAdminText(transactionEditForm.productName, 120),
+        denomination: cleanAdminText(transactionEditForm.denomination, 160),
+        paymentMethod: cleanAdminText(transactionEditForm.paymentMethod, 80),
+        paymentCategory: cleanAdminText(transactionEditForm.paymentCategory, 80),
+        subtotal: Number(transactionEditForm.subtotal || 0),
+        fee: Number(transactionEditForm.fee || 0),
+        total: Number(transactionEditForm.total || 0),
+        status: cleanAdminText(transactionEditForm.status, 30) || transaction.status,
+        createdAt: cleanAdminText(transactionEditForm.createdAt, 80) || transaction.createdAt,
+        updatedByAdminAt: new Date().toLocaleString('id-ID'),
+      };
+    });
+    setAdminTransactions(updated);
+    writeStorageList('goisiin_transactions', updated);
+    setTransactionAdminNotice(`Transaksi #${originalInvoiceId} berhasil diedit.`);
+    cancelEditTransaction();
+  };
+
+  const handleStartEditChatMessage = (message) => {
+    if (!message?.id) return;
+    setEditingChatMessageId(message.id);
+    setEditingChatMessageText(message.text || '');
+  };
+
+  const handleSaveChatMessageEdit = () => {
+    const result = editChatMessage(selectedChatId, editingChatMessageId, editingChatMessageText);
+    if (result.ok) {
+      setChatMessages(result.thread.messages || []);
+      setChatThreads(getChatThreads());
+    }
+    setEditingChatMessageId(null);
+    setEditingChatMessageText('');
+  };
+
+  const handleDeleteChatMessage = (messageId) => {
+    const result = deleteChatMessage(selectedChatId, messageId);
+    if (result.ok) {
+      setChatMessages(result.thread.messages || []);
+      setChatThreads(getChatThreads());
+    }
   };
 
   useEffect(() => {
@@ -1268,11 +1357,30 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                       }
 
                       const isMe = m.sender === 'cs';
+                      const isEditing = editingChatMessageId === m.id;
                       return (
                         <div key={m.id} className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'} mb-2`}>
-                          <span className="text-secondary mb-1" style={{ fontSize: '0.72rem' }}>
-                            {isMe ? `${m.agent || 'Admin'}` : 'User'} ({m.timestamp})
-                          </span>
+                          <div className="d-flex align-items-center gap-2 mb-1">
+                            <span className="text-secondary" style={{ fontSize: '0.72rem' }}>
+                              {isMe ? `${m.agent || 'Admin'}` : 'User'} ({m.timestamp})
+                            </span>
+                            <button
+                              type="button"
+                              className="btn btn-outline-secondary btn-sm py-0 px-1"
+                              style={{ fontSize: '0.68rem' }}
+                              onClick={() => handleStartEditChatMessage(m)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger btn-sm py-0 px-1"
+                              style={{ fontSize: '0.68rem' }}
+                              onClick={() => handleDeleteChatMessage(m.id)}
+                            >
+                              Hapus
+                            </button>
+                          </div>
                           <div
                             className={`p-2 rounded`}
                             style={{
@@ -1282,7 +1390,35 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                               color: '#fff'
                             }}
                           >
-                            {m.text}
+                            {isEditing ? (
+                              <div className="d-flex flex-column gap-2">
+                                <textarea
+                                  className="form-control order-input"
+                                  rows="2"
+                                  value={editingChatMessageText}
+                                  onChange={(event) => setEditingChatMessageText(event.target.value)}
+                                />
+                                <div className="d-flex gap-2 justify-content-end">
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-light"
+                                    onClick={() => {
+                                      setEditingChatMessageId(null);
+                                      setEditingChatMessageText('');
+                                    }}
+                                  >
+                                    Batal
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-success"
+                                    onClick={handleSaveChatMessageEdit}
+                                  >
+                                    Simpan
+                                  </button>
+                                </div>
+                              </div>
+                            ) : m.text}
                           </div>
                         </div>
                       );
@@ -1345,8 +1481,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                       <td colSpan="9" className="text-center py-4 text-secondary">Belum ada transaksi masuk.</td>
                     </tr>
                   ) : (
-                    adminTransactions.map(t => (
-                      <tr key={t.invoiceId}>
+                    adminTransactions.map(t => {
+                      const isEditingTx = editingTransactionId === t.invoiceId;
+                      return (
+                      <React.Fragment key={t.invoiceId}>
+                      <tr>
                         <td className="fw-semibold">#{t.invoiceId}</td>
                         <td>{t.userEmail || <span className="text-secondary">Guest (No Login)</span>}</td>
                         <td>
@@ -1431,6 +1570,14 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                                 type="button"
                                 className="btn btn-outline-info btn-sm py-0 px-2"
                                 style={{ height: '28px', fontSize: '0.74rem' }}
+                                onClick={() => startEditTransaction(t)}
+                              >
+                                Edit Data
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-outline-info btn-sm py-0 px-2"
+                                style={{ height: '28px', fontSize: '0.74rem' }}
                                 disabled={!t.userEmail}
                                 onClick={() => handleSendTransactionMessage(t)}
                                 title="Kirim popup/notifikasi pesanan ke user"
@@ -1493,19 +1640,98 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                           </div>
                         </td>
                       </tr>
-                    ))
+                      {isEditingTx && (
+                        <tr>
+                          <td colSpan="9">
+                            <div className="order-card p-3 border border-info">
+                              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                <h6 className="text-info fw-bold mb-0">Edit data transaksi #{t.invoiceId}</h6>
+                                <small className="text-secondary">Perubahan tersimpan ke data yang dilihat user.</small>
+                              </div>
+                              <div className="row g-2">
+                                <div className="col-md-3 col-12">
+                                  <label className="form-label text-secondary small">Invoice ID</label>
+                                  <input className="form-control order-input form-control-sm" value={transactionEditForm.invoiceId || ''} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, invoiceId: event.target.value })} />
+                                </div>
+                                <div className="col-md-3 col-12">
+                                  <label className="form-label text-secondary small">Email pembeli</label>
+                                  <input className="form-control order-input form-control-sm" value={transactionEditForm.userEmail || ''} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, userEmail: event.target.value })} />
+                                </div>
+                                <div className="col-md-3 col-12">
+                                  <label className="form-label text-secondary small">Produk</label>
+                                  <input className="form-control order-input form-control-sm" value={transactionEditForm.productName || ''} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, productName: event.target.value })} />
+                                </div>
+                                <div className="col-md-3 col-12">
+                                  <label className="form-label text-secondary small">Nominal / paket</label>
+                                  <input className="form-control order-input form-control-sm" value={transactionEditForm.denomination || ''} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, denomination: event.target.value })} />
+                                </div>
+                                <div className="col-md-4 col-12">
+                                  <label className="form-label text-secondary small">ID / WhatsApp / Data akun</label>
+                                  <input className="form-control order-input form-control-sm" value={transactionEditForm.userId || ''} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, userId: event.target.value })} />
+                                </div>
+                                <div className="col-md-2 col-12">
+                                  <label className="form-label text-secondary small">Nick / catatan</label>
+                                  <input className="form-control order-input form-control-sm" value={transactionEditForm.nick || ''} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, nick: event.target.value })} />
+                                </div>
+                                <div className="col-md-2 col-12">
+                                  <label className="form-label text-secondary small">Metode bayar</label>
+                                  <input className="form-control order-input form-control-sm" value={transactionEditForm.paymentMethod || ''} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, paymentMethod: event.target.value })} />
+                                </div>
+                                <div className="col-md-2 col-12">
+                                  <label className="form-label text-secondary small">Kategori bayar</label>
+                                  <input className="form-control order-input form-control-sm" value={transactionEditForm.paymentCategory || ''} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, paymentCategory: event.target.value })} />
+                                </div>
+                                <div className="col-md-2 col-12">
+                                  <label className="form-label text-secondary small">Status</label>
+                                  <select className="form-select order-input form-select-sm" value={transactionEditForm.status || 'pending'} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, status: event.target.value })}>
+                                    <option value="pending">Menunggu</option>
+                                    <option value="success">Berhasil</option>
+                                    <option value="failed">Gagal</option>
+                                  </select>
+                                </div>
+                                <div className="col-md-3 col-12">
+                                  <label className="form-label text-secondary small">Subtotal</label>
+                                  <input type="number" className="form-control order-input form-control-sm" value={transactionEditForm.subtotal || 0} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, subtotal: event.target.value })} />
+                                </div>
+                                <div className="col-md-3 col-12">
+                                  <label className="form-label text-secondary small">Fee</label>
+                                  <input type="number" className="form-control order-input form-control-sm" value={transactionEditForm.fee || 0} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, fee: event.target.value })} />
+                                </div>
+                                <div className="col-md-3 col-12">
+                                  <label className="form-label text-secondary small">Total</label>
+                                  <input type="number" className="form-control order-input form-control-sm" value={transactionEditForm.total || 0} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, total: event.target.value })} />
+                                </div>
+                                <div className="col-md-3 col-12">
+                                  <label className="form-label text-secondary small">Tanggal transaksi</label>
+                                  <input className="form-control order-input form-control-sm" value={transactionEditForm.createdAt || ''} onChange={(event) => setTransactionEditForm({ ...transactionEditForm, createdAt: event.target.value })} />
+                                </div>
+                              </div>
+                              <div className="d-flex gap-2 mt-3">
+                                <button type="button" className="btn btn-success btn-sm" onClick={() => handleSaveTransactionEdit(t.invoiceId)}>
+                                  Simpan Perubahan
+                                </button>
+                                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={cancelEditTransaction}>
+                                  Batal
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
+                    );})
                   )}
                 </tbody>
               </table>
               </div>
             </div>
             <div className="order-card p-3 mt-3">
-              <h5 className="text-success fw-bold mb-2">Tambah Saldo Goisiinn Manual</h5>
+              <h5 className="text-success fw-bold mb-2">Penyesuaian Saldo Goisiinn Manual</h5>
               <p className="text-secondary mb-3" style={{ fontSize: '0.84rem' }}>
-                Dipakai admin untuk refund/penyesuaian saldo ketika pembayaran gagal atau ada kendala yang sudah dicek manual.
+                Dipakai admin untuk tambah saldo refund, atau kurangi saldo jika nominal sebelumnya salah input.
               </p>
               <form className="row g-2 align-items-end" onSubmit={handleManualWalletCredit}>
-                <div className="col-lg-4 col-12">
+                <div className="col-lg-3 col-12">
                   <label className="form-label text-secondary small">Email user</label>
                   <input
                     className="form-control order-input"
@@ -1517,7 +1743,18 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     required
                   />
                 </div>
-                <div className="col-lg-3 col-12">
+                <div className="col-lg-2 col-12">
+                  <label className="form-label text-secondary small">Aksi saldo</label>
+                  <select
+                    className="form-select order-input"
+                    value={walletCreditForm.direction}
+                    onChange={(event) => setWalletCreditForm({ ...walletCreditForm, direction: event.target.value })}
+                  >
+                    <option value="credit">Tambah saldo</option>
+                    <option value="debit">Kurangi saldo</option>
+                  </select>
+                </div>
+                <div className="col-lg-2 col-12">
                   <label className="form-label text-secondary small">Nominal saldo</label>
                   <input
                     className="form-control order-input"
@@ -1539,7 +1776,9 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                   />
                 </div>
                 <div className="col-lg-2 col-12">
-                  <button className="btn btn-success w-100 fw-bold" type="submit">Tambah Saldo</button>
+                  <button className={`btn w-100 fw-bold ${walletCreditForm.direction === 'debit' ? 'btn-warning' : 'btn-success'}`} type="submit">
+                    {walletCreditForm.direction === 'debit' ? 'Kurangi Saldo' : 'Tambah Saldo'}
+                  </button>
                 </div>
                 <datalist id="admin-wallet-users">
                   {adminUsers.map((userItem) => <option value={userItem.email} key={userItem.email}>{userItem.name}</option>)}

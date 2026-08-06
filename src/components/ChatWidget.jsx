@@ -22,6 +22,7 @@ const CHAT_SYNC_KEYS = [
   'goisiin_chat_admin_mode',
   'goisiin_chat_active_admin',
 ];
+const SAFE_AI_ERROR_MESSAGE = 'Maaf Kak, Vindy sedang kurang stabil. Aku teruskan ke Admin Goisiinn supaya dibantu langsung.';
 const makeMessageId = (prefix = 'msg') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 export default function ChatWidget({ products, user, transactions }) {
@@ -53,6 +54,7 @@ export default function ChatWidget({ products, user, transactions }) {
   useEffect(() => {
     let cancelled = false;
     const syncChat = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       await hydrateCloudStateKeys(CHAT_SYNC_KEYS);
       if (!cancelled) {
         const thread = getChatThread(chatIdentity);
@@ -62,13 +64,14 @@ export default function ChatWidget({ products, user, transactions }) {
         setActiveAdmin(thread.activeAdmin || null);
       }
     };
-    syncChat();
-    const timer = setInterval(syncChat, isOpen ? 4500 : 10000);
+    if (isOpen || user?.email) syncChat();
+    const syncEveryMs = isOpen ? 6000 : (user?.email ? 20000 : 0);
+    const timer = syncEveryMs ? setInterval(syncChat, syncEveryMs) : null;
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      if (timer) clearInterval(timer);
     };
-  }, [isOpen, chatIdentity]);
+  }, [isOpen, chatIdentity, user?.email]);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -274,10 +277,10 @@ export default function ChatWidget({ products, user, transactions }) {
           context: buildChatContext(),
         }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error || 'Chat sedang dibatasi.');
+        throw new Error(data.error || 'ai_unavailable');
       }
 
       const csMsg = createChatMessage({
@@ -293,14 +296,8 @@ export default function ChatWidget({ products, user, transactions }) {
       } else {
         saveState(nextMsgs);
       }
-    } catch (err) {
-      const errorMsg = createChatMessage({
-        id: makeMessageId('msg'),
-        sender: 'cs',
-        agent: 'Vindy',
-        text: err.message || 'Maaf Kak, jaringan Vindy sedang terganggu. Coba lagi sebentar atau hubungi admin Goisiinn.',
-      });
-      saveState([...updatedMsgs, errorMsg]);
+    } catch {
+      handoffToAdmin(updatedMsgs, SAFE_AI_ERROR_MESSAGE);
     } finally {
       setIsTyping(false);
     }

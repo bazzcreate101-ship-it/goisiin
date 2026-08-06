@@ -5,16 +5,6 @@ import LoginModal from './components/LoginModal';
 import Footer from './components/Footer';
 import SeoManager from './components/SeoManager';
 import HomeView from './views/HomeView';
-import OrderView from './views/OrderView';
-import InvoiceView from './views/InvoiceView';
-import TransactionsView from './views/TransactionsView';
-import AdminLogin from './views/AdminLogin';
-import AdminDashboard from './views/AdminDashboard';
-import PageView from './views/PageView';
-import StampView from './views/StampView';
-import WalletView from './views/WalletView';
-import VouchersView from './views/VouchersView';
-import ChatWidget from './components/ChatWidget';
 import { products as initialProducts } from './data/products';
 import { supabase } from './lib/supabaseClient';
 import {
@@ -29,6 +19,16 @@ import { trackTrafficView } from './lib/trafficTracker';
 import { getAccountBlock, isAccountBlocked } from './lib/accountBlocks';
 
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
+const OrderView = React.lazy(() => import('./views/OrderView'));
+const InvoiceView = React.lazy(() => import('./views/InvoiceView'));
+const TransactionsView = React.lazy(() => import('./views/TransactionsView'));
+const PageView = React.lazy(() => import('./views/PageView'));
+const StampView = React.lazy(() => import('./views/StampView'));
+const WalletView = React.lazy(() => import('./views/WalletView'));
+const VouchersView = React.lazy(() => import('./views/VouchersView'));
+const ChatWidget = React.lazy(() => import('./components/ChatWidget'));
+const AdminLogin = React.lazy(() => import('./views/AdminLogin'));
+const AdminDashboard = React.lazy(() => import('./views/AdminDashboard'));
 
 const isAdminUrl = () =>
   window.location.pathname === '/bolehnihadmin' ||
@@ -385,7 +385,7 @@ function App() {
     };
 
     runAutoRestock();
-    const timer = setInterval(runAutoRestock, 30 * 1000);
+    const timer = setInterval(runAutoRestock, 120 * 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -457,17 +457,23 @@ function App() {
     }
 
     if (!adminUser) {
-      return <AdminLogin onLogin={handleAdminLogin} />;
+      return (
+        <React.Suspense fallback={<div className="main main-surface d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}><div className="text-success fw-bold">Memuat admin...</div></div>}>
+          <AdminLogin onLogin={handleAdminLogin} />
+        </React.Suspense>
+      );
     }
 
     return (
-      <AdminDashboard
-        products={products}
-        onUpdateProducts={handleUpdateProducts}
-        adminUser={adminUser}
-        onLogout={handleAdminLogout}
-        onNavigate={handleNavigate}
-      />
+      <React.Suspense fallback={<div className="main main-surface d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}><div className="text-success fw-bold">Memuat dashboard admin...</div></div>}>
+        <AdminDashboard
+          products={products}
+          onUpdateProducts={handleUpdateProducts}
+          adminUser={adminUser}
+          onLogout={handleAdminLogout}
+          onNavigate={handleNavigate}
+        />
+      </React.Suspense>
     );
   }
 
@@ -521,62 +527,68 @@ function App() {
         {currentView === 'home' && (
           <HomeView products={products} onSelectProduct={handleSelectProduct} onNavigate={handleNavigate} />
         )}
-        {currentView === 'order' && (
-          <OrderView
-            productId={activeProductId}
-            products={products}
-            onNavigate={handleNavigate}
-            user={user}
-            onLoginOpen={() => setIsLoginOpen(true)}
-            onUpdateProducts={handleUpdateProducts}
-          />
-        )}
-        {currentView === 'invoice' && (
-          <InvoiceView
-            invoiceData={invoiceData}
-            onNavigate={handleNavigate}
-          />
-        )}
-        {currentView === 'transactions' && (
-          <TransactionsView
-            user={user}
-            onNavigate={handleNavigate}
-          />
-        )}
-        {currentView === 'stamp' && (
-          <StampView
-            user={user}
-            onLoginOpen={() => setIsLoginOpen(true)}
-            onNavigate={handleNavigate}
-          />
-        )}
-        {currentView === 'wallet' && (
-          <WalletView
-            user={user}
-            onNavigate={handleNavigate}
-          />
-        )}
-        {currentView === 'vouchers' && (
-          <VouchersView
-            user={user}
-            onNavigate={handleNavigate}
-          />
-        )}
-        {currentView === 'page' && (
-          <PageView
-            page={activePage}
-            onNavigate={handleNavigate}
-          />
+        {currentView !== 'home' && (
+          <React.Suspense fallback={<div className="main main-surface py-5 text-center text-success fw-bold">Memuat halaman...</div>}>
+            {currentView === 'order' && (
+              <OrderView
+                productId={activeProductId}
+                products={products}
+                onNavigate={handleNavigate}
+                user={user}
+                onLoginOpen={() => setIsLoginOpen(true)}
+                onUpdateProducts={handleUpdateProducts}
+              />
+            )}
+            {currentView === 'invoice' && (
+              <InvoiceView
+                invoiceData={invoiceData}
+                onNavigate={handleNavigate}
+              />
+            )}
+            {currentView === 'transactions' && (
+              <TransactionsView
+                user={user}
+                onNavigate={handleNavigate}
+              />
+            )}
+            {currentView === 'stamp' && (
+              <StampView
+                user={user}
+                onLoginOpen={() => setIsLoginOpen(true)}
+                onNavigate={handleNavigate}
+              />
+            )}
+            {currentView === 'wallet' && (
+              <WalletView
+                user={user}
+                onNavigate={handleNavigate}
+              />
+            )}
+            {currentView === 'vouchers' && (
+              <VouchersView
+                user={user}
+                onNavigate={handleNavigate}
+              />
+            )}
+            {currentView === 'page' && (
+              <PageView
+                page={activePage}
+                onNavigate={handleNavigate}
+              />
+            )}
+          </React.Suspense>
         )}
       </main>
 
       <Footer onNavigate={handleNavigate} />
 
-      <ChatWidget
-        products={products}
-        user={user}
-        transactions={readUserTransactions(user)}
-      />
+      <React.Suspense fallback={null}>
+        <ChatWidget
+          products={products}
+          user={user}
+          transactions={readUserTransactions(user)}
+        />
+      </React.Suspense>
     </>
   );
 }

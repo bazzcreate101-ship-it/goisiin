@@ -84,6 +84,24 @@ export function addWalletEntry({ userEmail, kind, delta, invoiceId, withdrawalId
   return { ok: true, entry };
 }
 
+export function adjustWalletBalance({ userEmail, amount, direction = 'credit', note, actor = 'admin' }) {
+  const numericAmount = Math.abs(Number(amount || 0));
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    return { ok: false, reason: 'invalid_amount' };
+  }
+  const isDebit = direction === 'debit';
+  if (isDebit && getWalletBalance(userEmail) < numericAmount) {
+    return { ok: false, reason: 'insufficient_balance' };
+  }
+  return addWalletEntry({
+    userEmail,
+    kind: isDebit ? 'admin_debit' : 'admin_credit',
+    delta: isDebit ? -numericAmount : numericAmount,
+    note: note || (isDebit ? 'Pengurangan saldo oleh admin' : 'Penambahan saldo oleh admin'),
+    metadata: { actor },
+  });
+}
+
 export function debitWalletForPurchase(transaction) {
   const userEmail = normalizeWalletEmail(transaction?.userEmail);
   const total = Number(transaction?.total || 0);

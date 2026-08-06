@@ -444,3 +444,30 @@ export function markChatThreadRead(threadId, reader = 'admin') {
     [reader === 'user' ? 'userLastReadAt' : 'adminLastReadAt']: new Date().toISOString(),
   });
 }
+
+export function editChatMessage(threadId, messageId, text) {
+  const safeText = String(text || '').trim().slice(0, 1200);
+  if (!threadId || !messageId || !safeText) return { ok: false, reason: 'invalid_input' };
+  const thread = getChatThreads().find((item) => item.id === threadId);
+  if (!thread) return { ok: false, reason: 'thread_not_found' };
+  const messages = (thread.messages || []).map((message) => (
+    message.id === messageId
+      ? {
+        ...message,
+        text: safeText,
+        adminEditedAt: new Date().toISOString(),
+      }
+      : message
+  ));
+  const saved = saveChatThread({ ...thread, messages });
+  return { ok: true, thread: saved };
+}
+
+export function deleteChatMessage(threadId, messageId) {
+  if (!threadId || !messageId) return { ok: false, reason: 'invalid_input' };
+  const thread = getChatThreads().find((item) => item.id === threadId);
+  if (!thread) return { ok: false, reason: 'thread_not_found' };
+  const messages = (thread.messages || []).filter((message) => message.id !== messageId);
+  const saved = saveChatThread({ ...thread, messages });
+  return { ok: true, thread: saved };
+}
