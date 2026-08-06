@@ -1,6 +1,7 @@
 export const CLOUD_STATE_KEYS = [
   'goisiin_transactions',
   'goisiin_users',
+  'goisiin_blocked_users',
   'goisiin_products',
   'goisiin_chat_threads',
   'goisiin_chat_messages',

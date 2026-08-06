@@ -35,6 +35,12 @@ import {
   markChatThreadRead,
   saveChatThread,
 } from '../lib/chatThreads';
+import {
+  blockAccount,
+  getAccountBlock,
+  getBlockedAccounts,
+  unblockAccount,
+} from '../lib/accountBlocks';
 import { hydrateCloudStateKeys } from '../lib/cloudState';
 
 const initialCategories = [
@@ -147,6 +153,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   // Transactions & Users state
   const [adminTransactions, setAdminTransactions] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
+  const [accountBlockRefreshKey, setAccountBlockRefreshKey] = useState(0);
+  const [accountBlockNotice, setAccountBlockNotice] = useState('');
   const [stampRefreshKey, setStampRefreshKey] = useState(0);
   const [walletRefreshKey, setWalletRefreshKey] = useState(0);
   const [stampForm, setStampForm] = useState({ email: '', stampNo: 1 });
@@ -211,6 +219,18 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   }, []);
 
   useEffect(() => {
+    const refreshBlocks = () => setAccountBlockRefreshKey((key) => key + 1);
+    window.addEventListener('storage', refreshBlocks);
+    window.addEventListener('goisiin:cloud-state-updated', refreshBlocks);
+    window.addEventListener('goisiin:blocked-users-updated', refreshBlocks);
+    return () => {
+      window.removeEventListener('storage', refreshBlocks);
+      window.removeEventListener('goisiin:cloud-state-updated', refreshBlocks);
+      window.removeEventListener('goisiin:blocked-users-updated', refreshBlocks);
+    };
+  }, []);
+
+  useEffect(() => {
     if (activeTab !== 'traffic') return undefined;
 
     let isMounted = true;
@@ -242,6 +262,21 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       clearInterval(timer);
     };
   }, [activeTab, trafficRefreshTick]);
+
+  useEffect(() => {
+    if (activeTab !== 'users') return undefined;
+    let cancelled = false;
+    const syncBlockedUsers = async () => {
+      await hydrateCloudStateKeys(['goisiin_blocked_users']);
+      if (!cancelled) setAccountBlockRefreshKey((key) => key + 1);
+    };
+    syncBlockedUsers();
+    const timer = setInterval(syncBlockedUsers, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeTab]);
 
   const handleUpdateTxStatus = (invoiceId, nextStatus) => {
     let stampResult = null;
@@ -703,6 +738,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const walletLedger = walletRefreshKey >= 0 ? getWalletLedger() : [];
   const withdrawalRequests = walletRefreshKey >= 0 ? getWithdrawalRequests() : [];
   const adminActor = adminUser?.email || adminUser?.name || 'admin';
+  const blockedAccounts = accountBlockRefreshKey >= 0 ? getBlockedAccounts() : [];
   const chatThreadsWithStats = chatThreads.map((thread) => ({
     ...thread,
     stats: getChatThreadStats(thread),
@@ -721,6 +757,39 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     });
   const unreadAdminCount = chatThreadsWithStats.filter((thread) => thread.stats.unreadForAdmin).length;
   const unansweredCount = chatThreadsWithStats.filter((thread) => thread.stats.unanswered).length;
+
+  const reloadBlockedAccounts = () => setAccountBlockRefreshKey((key) => key + 1);
+
+  const handleBlockAccount = (email, defaultName = '') => {
+    const targetEmail = cleanAdminText(email, 160).toLowerCase();
+    if (!targetEmail) {
+      setAccountBlockNotice('Email akun tidak valid.');
+      return;
+    }
+    const reason = window.prompt(
+      `Alasan blokir akun ${defaultName || targetEmail}?`,
+      'Aktivitas akun dibatasi oleh admin. Hubungi CS Goisiinn untuk bantuan.',
+    );
+    if (reason === null) return;
+    const result = blockAccount(targetEmail, reason, adminActor);
+    setAccountBlockNotice(result.ok
+      ? `Akun ${targetEmail} berhasil diblokir.`
+      : 'Gagal memblokir akun.');
+    reloadBlockedAccounts();
+  };
+
+  const handleUnblockAccount = (email) => {
+    const targetEmail = cleanAdminText(email, 160).toLowerCase();
+    if (!targetEmail) {
+      setAccountBlockNotice('Email akun tidak valid.');
+      return;
+    }
+    const result = unblockAccount(targetEmail);
+    setAccountBlockNotice(result.ok
+      ? `Akun ${targetEmail} sudah dibuka kembali.`
+      : 'Gagal membuka blokir akun.');
+    reloadBlockedAccounts();
+  };
 
   const handleAdminGrantStamp = (e) => {
     e.preventDefault();
@@ -1549,6 +1618,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
         {activeTab === 'users' && (
           <div className="order-card p-3">
             <h5 className="text-success fw-bold mb-3">Daftar Akun Pengguna Terdaftar</h5>
+            {accountBlockNotice && (
+              <div className="alert alert-info py-2 px-3" style={{ fontSize: '0.84rem' }}>
+                {accountBlockNotice}
+              </div>
+            )}
             <div className="table-responsive">
               <table className="table table-dark table-striped table-hover align-middle" style={{ fontSize: '0.85rem' }}>
                 <thead>
@@ -1558,16 +1632,21 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     <th>Email Pengguna</th>
                     <th>Saldo Goisiinn</th>
                     <th>Tanggal Terdaftar / Login Terakhir</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {adminUsers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center py-4 text-secondary">Belum ada pengguna terdaftar.</td>
+                      <td colSpan="7" className="text-center py-4 text-secondary">Belum ada pengguna terdaftar.</td>
                     </tr>
                   ) : (
-                    adminUsers.map((u, i) => (
-                      <tr key={i}>
+                    adminUsers.map((u, i) => {
+                      const block = getAccountBlock(u.email);
+                      const blocked = Boolean(block);
+                      return (
+                      <tr key={i} className={blocked ? 'table-danger' : ''}>
                         <td>
                           <img
                             src={u.picture || "https://lh3.googleusercontent.com/a/default-user=s100"}
@@ -1582,12 +1661,66 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                         <td>{u.email}</td>
                         <td className="text-success fw-bold">{formatRupiah(getWalletBalance(u.email))}</td>
                         <td>{u.lastLogin || 'N/A'}</td>
+                        <td>
+                          {blocked ? (
+                            <div>
+                              <span className="badge bg-danger">Diblokir</span>
+                              <div className="text-secondary mt-1" style={{ fontSize: '0.72rem' }}>
+                                {block.reason}<br />
+                                {block.blockedAt}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="badge bg-success">Aktif</span>
+                          )}
+                        </td>
+                        <td>
+                          {blocked ? (
+                            <button
+                              className="btn btn-outline-success btn-sm"
+                              type="button"
+                              onClick={() => handleUnblockAccount(u.email)}
+                            >
+                              Buka Blokir
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-outline-danger btn-sm"
+                              type="button"
+                              onClick={() => handleBlockAccount(u.email, u.name)}
+                            >
+                              Blokir Akun
+                            </button>
+                          )}
+                        </td>
                       </tr>
-                    ))
+                    );})
                   )}
                 </tbody>
               </table>
             </div>
+            {blockedAccounts.length > 0 && (
+              <div className="mt-3">
+                <h6 className="text-danger fw-bold mb-2">Akun Terblokir ({blockedAccounts.length})</h6>
+                <div className="d-flex flex-column gap-2">
+                  {blockedAccounts.slice(0, 30).map((account) => (
+                    <div className="blocked-account-row" key={account.email}>
+                      <div>
+                        <strong>{account.email}</strong>
+                        <span>{account.reason} · {account.blockedAt}</span>
+                      </div>
+                      <button
+                        className="btn btn-outline-success btn-sm"
+                        type="button"
+                        onClick={() => handleUnblockAccount(account.email)}
+                      >
+                        Buka Blokir
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

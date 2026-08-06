@@ -24,8 +24,9 @@ import {
   safeJsonParse,
 } from './lib/storage';
 import { autoRestockProducts } from './lib/productStock';
-import { hydrateCloudState, writeCloudBackedValue } from './lib/cloudState';
+import { hydrateCloudState, hydrateCloudStateKeys, writeCloudBackedValue } from './lib/cloudState';
 import { trackTrafficView } from './lib/trafficTracker';
+import { getAccountBlock, isAccountBlocked } from './lib/accountBlocks';
 
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
 
@@ -121,6 +122,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
   const [adminChecking, setAdminChecking] = useState(() => initialRoute.view === 'admin');
+  const [blockedNotice, setBlockedNotice] = useState('');
 
   const [products, setProducts] = useState(() => {
     const normalizedProducts = normalizeStoredProducts(localStorage.getItem('goisiin_products'), initialProducts);
@@ -134,6 +136,13 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        if (isAccountBlocked(session.user.email)) {
+          const block = getAccountBlock(session.user.email);
+          setBlockedNotice(block?.reason || 'Akun ini sedang dibatasi oleh admin.');
+          supabase.auth.signOut();
+          setUser(null);
+          return;
+        }
         setUser({
           name: session.user.user_metadata.full_name || session.user.email,
           email: session.user.email,
@@ -144,6 +153,13 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
+        if (isAccountBlocked(session.user.email)) {
+          const block = getAccountBlock(session.user.email);
+          setBlockedNotice(block?.reason || 'Akun ini sedang dibatasi oleh admin.');
+          supabase.auth.signOut();
+          setUser(null);
+          return;
+        }
         setUser({
           name: session.user.user_metadata.full_name || session.user.email,
           email: session.user.email,
@@ -160,6 +176,35 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user?.email) return undefined;
+
+    const enforceAccountBlock = () => {
+      if (!isAccountBlocked(user.email)) return;
+      const block = getAccountBlock(user.email);
+      setBlockedNotice(block?.reason || 'Akun ini sedang dibatasi oleh admin.');
+      supabase.auth.signOut();
+      setUser(null);
+      setCurrentView('home');
+      pushCleanRoute('home');
+    };
+
+    enforceAccountBlock();
+    window.addEventListener('storage', enforceAccountBlock);
+    window.addEventListener('goisiin:cloud-state-updated', enforceAccountBlock);
+    window.addEventListener('goisiin:blocked-users-updated', enforceAccountBlock);
+    const timer = setInterval(async () => {
+      await hydrateCloudStateKeys(['goisiin_blocked_users']);
+      enforceAccountBlock();
+    }, 15000);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('storage', enforceAccountBlock);
+      window.removeEventListener('goisiin:cloud-state-updated', enforceAccountBlock);
+      window.removeEventListener('goisiin:blocked-users-updated', enforceAccountBlock);
+    };
+  }, [user]);
 
   useEffect(() => {
     hydrateCloudState().then((result) => {
@@ -459,6 +504,18 @@ function App() {
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
       />
+
+      {blockedNotice && (
+        <div className="account-block-notice" role="alert">
+          <div>
+            <strong>Akun dibatasi</strong>
+            <span>{blockedNotice}</span>
+          </div>
+          <button type="button" onClick={() => setBlockedNotice('')} aria-label="Tutup notifikasi">
+            ×
+          </button>
+        </div>
+      )}
 
       <main id="main-content">
         {currentView === 'home' && (

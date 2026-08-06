@@ -13,6 +13,7 @@ const TABLE_NAME = 'goisiin_app_state';
 const ALLOWED_KEYS = new Set([
   'goisiin_transactions',
   'goisiin_users',
+  'goisiin_blocked_users',
   'goisiin_products',
   'goisiin_chat_threads',
   'goisiin_chat_messages',

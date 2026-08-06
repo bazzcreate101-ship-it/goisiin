@@ -5,6 +5,7 @@ import { buildDynamicQrisPayload, makeRetailBarcodeValue } from '../lib/qris';
 import { debitWalletForPurchase, getWalletBalance } from '../lib/walletService';
 import { awardStampForTransaction } from '../lib/stampService';
 import { decrementProductStock } from '../lib/productStock';
+import { getAccountBlock, isAccountBlocked } from '../lib/accountBlocks';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 const cleanInput = (value, type) => {
@@ -90,6 +91,11 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
     if (!user?.email) {
       setPaymentNotice('Login dulu untuk melanjutkan pembayaran dan menyimpan riwayat transaksi.');
       onLoginOpen?.();
+      return;
+    }
+    if (isAccountBlocked(user.email)) {
+      const block = getAccountBlock(user.email);
+      setPaymentNotice(block?.reason || 'Akun kamu sedang dibatasi oleh admin dan tidak bisa membuat pesanan.');
       return;
     }
     const errs = validate();
