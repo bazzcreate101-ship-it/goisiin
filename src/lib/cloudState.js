@@ -122,6 +122,12 @@ function normalizeReplacedThreadIds(value) {
     : [];
 }
 
+function normalizeDeletedMessageIds(value) {
+  return Array.isArray(value)
+    ? value.map((id) => String(id || '')).filter(Boolean).slice(0, 300)
+    : [];
+}
+
 function normalizeChatMessage(message) {
   const createdAt = isValidDateString(message?.createdAt)
     ? message.createdAt
@@ -141,10 +147,12 @@ function normalizeChatMessage(message) {
   };
 }
 
-function mergeChatMessages(left = [], right = []) {
+function mergeChatMessages(left = [], right = [], deletedMessageIds = []) {
   const byId = new Map();
+  const deletedIds = new Set(normalizeDeletedMessageIds(deletedMessageIds));
   [...(Array.isArray(left) ? left : []), ...(Array.isArray(right) ? right : [])].forEach((message, index) => {
     const normalized = normalizeChatMessage(message);
+    if (deletedIds.has(normalized.id)) return;
     const existing = byId.get(normalized.id) || {};
     if (normalized.text) {
       byId.set(normalized.id, {
@@ -190,7 +198,8 @@ function mergeChatThreads(localThreads, cloudThreads) {
     .forEach((thread) => {
       const id = String(thread.id);
       if (replacedThreadIds.has(id)) return;
-      const messages = mergeChatMessages([], thread.messages);
+      const deletedMessageIds = normalizeDeletedMessageIds(thread.deletedMessageIds);
+      const messages = mergeChatMessages([], thread.messages, deletedMessageIds);
       const existing = byId.get(id);
       const normalized = {
         id,
@@ -201,6 +210,7 @@ function mergeChatThreads(localThreads, cloudThreads) {
         adminMode: Boolean(thread.adminMode),
         activeAdmin: thread.activeAdmin || null,
         replacedThreadIds: normalizeReplacedThreadIds(thread.replacedThreadIds),
+        deletedMessageIds,
         adminLastReadAt: validOrEmpty(thread.adminLastReadAt),
         userLastReadAt: validOrEmpty(thread.userLastReadAt),
         lastOrderInvoiceId: thread.lastOrderInvoiceId || null,
@@ -216,11 +226,17 @@ function mergeChatThreads(localThreads, cloudThreads) {
       const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
       const incomingTime = new Date(normalized.updatedAt || normalized.createdAt || 0).getTime();
       const newer = incomingTime >= existingTime ? normalized : existing;
+      const mergedDeletedMessageIds = Array.from(new Set([
+        ...normalizeDeletedMessageIds(existing.deletedMessageIds),
+        ...normalizeDeletedMessageIds(normalized.deletedMessageIds),
+      ])).slice(0, 300);
+      const mergedMessages = mergeChatMessages(existing.messages, normalized.messages, mergedDeletedMessageIds);
       byId.set(id, {
         ...existing,
         ...newer,
         id,
-        messages: mergeChatMessages(existing.messages, normalized.messages),
+        messages: mergedMessages,
+        deletedMessageIds: mergedDeletedMessageIds,
         replacedThreadIds: Array.from(new Set([
           ...normalizeReplacedThreadIds(existing.replacedThreadIds),
           ...normalizeReplacedThreadIds(normalized.replacedThreadIds),
@@ -230,7 +246,7 @@ function mergeChatThreads(localThreads, cloudThreads) {
         lastOrderInvoiceId: newer.lastOrderInvoiceId || existing.lastOrderInvoiceId || null,
         createdAt: getOlderDate(existing.createdAt, normalized.createdAt),
         updatedAt: getThreadUpdatedAt(
-          mergeChatMessages(existing.messages, normalized.messages),
+          mergedMessages,
           newer.updatedAt || existing.updatedAt,
         ),
       });

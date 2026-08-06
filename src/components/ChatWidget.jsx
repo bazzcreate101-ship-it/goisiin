@@ -34,24 +34,40 @@ export default function ChatWidget({ products, user, transactions }) {
   const [activeAdmin, setActiveAdmin] = useState(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [currentThread, setCurrentThread] = useState(null);
+  const [chatReady, setChatReady] = useState(false);
   const messagesEndRef = useRef(null);
   const chatIdentity = useMemo(() => getChatIdentity(user), [user]);
 
   useEffect(() => {
-    const thread = getChatThread(chatIdentity);
-    setCurrentThread(thread);
-    setMessages(thread.messages);
-    setAdminMode(Boolean(thread.adminMode));
-    setActiveAdmin(thread.activeAdmin || null);
-    saveChatThread({
-      ...thread,
-      userName: chatIdentity.userName,
-      userEmail: chatIdentity.userEmail,
-      isGuest: chatIdentity.isGuest,
-    });
+    let cancelled = false;
+    const bootChatThread = async () => {
+      setChatReady(false);
+      if (!chatIdentity.isGuest) {
+        await hydrateCloudStateKeys(CHAT_SYNC_KEYS);
+      }
+      if (cancelled) return;
+      const thread = getChatThread(chatIdentity);
+      const savedThread = saveChatThread({
+        ...thread,
+        userName: chatIdentity.userName,
+        userEmail: chatIdentity.userEmail,
+        isGuest: chatIdentity.isGuest,
+      });
+      if (cancelled) return;
+      setCurrentThread(savedThread);
+      setMessages(savedThread.messages);
+      setAdminMode(Boolean(savedThread.adminMode));
+      setActiveAdmin(savedThread.activeAdmin || null);
+      setChatReady(true);
+    };
+    bootChatThread();
+    return () => {
+      cancelled = true;
+    };
   }, [chatIdentity]);
 
   useEffect(() => {
+    if (!chatReady) return undefined;
     let cancelled = false;
     const syncChat = async () => {
       if (typeof document !== 'undefined' && document.hidden) return;
@@ -71,10 +87,11 @@ export default function ChatWidget({ products, user, transactions }) {
       cancelled = true;
       if (timer) clearInterval(timer);
     };
-  }, [isOpen, chatIdentity, user?.email]);
+  }, [chatReady, isOpen, chatIdentity, user?.email]);
 
   useEffect(() => {
     const handleStorageChange = () => {
+      if (!chatReady) return;
       const thread = getChatThread(chatIdentity);
       setCurrentThread(thread);
       setMessages(thread.messages);
@@ -89,13 +106,13 @@ export default function ChatWidget({ products, user, transactions }) {
       window.removeEventListener('goisiin:cloud-state-updated', handleStorageChange);
       window.removeEventListener('goisiin:chat-threads-updated', handleStorageChange);
     };
-  }, [chatIdentity]);
+  }, [chatReady, chatIdentity]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !chatReady) return;
     const marked = markChatThreadRead(chatIdentity.id, 'user');
     if (marked) setCurrentThread(marked);
-  }, [isOpen, chatIdentity.id, messages.length]);
+  }, [isOpen, chatReady, chatIdentity.id, messages.length]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -232,7 +249,7 @@ export default function ChatWidget({ products, user, transactions }) {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     const messageText = inputText.trim().slice(0, MAX_MESSAGE_LENGTH);
-    if (!messageText || isTyping || Date.now() < cooldownUntil) return;
+    if (!chatReady || !messageText || isTyping || Date.now() < cooldownUntil) return;
 
     setCooldownUntil(Date.now() + CLIENT_COOLDOWN_MS);
 
@@ -388,11 +405,12 @@ export default function ChatWidget({ products, user, transactions }) {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="chat-input-field"
+              disabled={!chatReady}
             />
             <button
               type="submit"
               className="chat-send-btn"
-              disabled={!inputText.trim() || isTyping || Date.now() < cooldownUntil}
+              disabled={!chatReady || !inputText.trim() || isTyping || Date.now() < cooldownUntil}
             >
               <i className="bi bi-send-fill text-white"></i>
             </button>

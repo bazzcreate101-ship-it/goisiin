@@ -78,21 +78,26 @@ export function getChatIdentity(user) {
 export function getChatThreads() {
   const threads = readStorageList(CHAT_THREADS_KEY)
     .filter((thread) => thread?.id)
-    .map((thread) => ({
-      id: String(thread.id),
-      userName: thread.userName || 'Pengunjung',
-      userEmail: thread.userEmail || '',
-      isGuest: Boolean(thread.isGuest),
-      messages: mergeMessages([], thread.messages),
-      adminMode: Boolean(thread.adminMode),
-      activeAdmin: thread.activeAdmin || null,
-      replacedThreadIds: normalizeReplacedThreadIds(thread.replacedThreadIds),
-      adminLastReadAt: validOrEmpty(thread.adminLastReadAt),
-      userLastReadAt: validOrEmpty(thread.userLastReadAt),
-      lastOrderInvoiceId: thread.lastOrderInvoiceId || null,
-      updatedAt: getThreadUpdatedAt(thread.messages, thread.updatedAt || thread.createdAt || new Date().toISOString()),
-      createdAt: thread.createdAt || new Date().toISOString(),
-    }));
+    .map((thread) => {
+      const deletedMessageIds = normalizeDeletedMessageIds(thread.deletedMessageIds);
+      const messages = mergeMessages([], thread.messages, deletedMessageIds);
+      return {
+        id: String(thread.id),
+        userName: thread.userName || 'Pengunjung',
+        userEmail: thread.userEmail || '',
+        isGuest: Boolean(thread.isGuest),
+        messages,
+        adminMode: Boolean(thread.adminMode),
+        activeAdmin: thread.activeAdmin || null,
+        replacedThreadIds: normalizeReplacedThreadIds(thread.replacedThreadIds),
+        deletedMessageIds,
+        adminLastReadAt: validOrEmpty(thread.adminLastReadAt),
+        userLastReadAt: validOrEmpty(thread.userLastReadAt),
+        lastOrderInvoiceId: thread.lastOrderInvoiceId || null,
+        updatedAt: getThreadUpdatedAt(messages, thread.updatedAt || thread.createdAt || new Date().toISOString()),
+        createdAt: thread.createdAt || new Date().toISOString(),
+      };
+    });
 
   const replacedThreadIds = new Set(threads.flatMap((thread) => normalizeReplacedThreadIds(thread.replacedThreadIds)));
   const activeThreads = threads.filter((thread) => !replacedThreadIds.has(thread.id));
@@ -171,10 +176,18 @@ function normalizeReplacedThreadIds(value) {
     : [];
 }
 
-function mergeMessages(left = [], right = []) {
+function normalizeDeletedMessageIds(value) {
+  return Array.isArray(value)
+    ? value.map((id) => String(id || '')).filter(Boolean).slice(0, 300)
+    : [];
+}
+
+function mergeMessages(left = [], right = [], deletedMessageIds = []) {
   const byId = new Map();
+  const deletedIds = new Set(normalizeDeletedMessageIds(deletedMessageIds));
   [...(Array.isArray(left) ? left : []), ...(Array.isArray(right) ? right : [])].forEach((message, index) => {
     const normalized = normalizeMessage(message);
+    if (deletedIds.has(normalized.id)) return;
     if (!normalized.text) return;
     const existing = byId.get(normalized.id) || {};
     byId.set(normalized.id, {
@@ -248,13 +261,14 @@ export function mergeChatThreads(localThreads = [], incomingThreads = []) {
         byId.set(id, {
           id,
           userName: thread.userName || 'Pengunjung',
-          userEmail: thread.userEmail || '',
-          isGuest: Boolean(thread.isGuest),
-          messages,
-          adminMode: Boolean(thread.adminMode),
-          activeAdmin: thread.activeAdmin || null,
-          replacedThreadIds: normalizeReplacedThreadIds(thread.replacedThreadIds),
-          adminLastReadAt: validOrEmpty(thread.adminLastReadAt),
+      userEmail: thread.userEmail || '',
+      isGuest: Boolean(thread.isGuest),
+      messages: mergeMessages([], messages, thread.deletedMessageIds),
+      adminMode: Boolean(thread.adminMode),
+      activeAdmin: thread.activeAdmin || null,
+      replacedThreadIds: normalizeReplacedThreadIds(thread.replacedThreadIds),
+      deletedMessageIds: normalizeDeletedMessageIds(thread.deletedMessageIds),
+      adminLastReadAt: validOrEmpty(thread.adminLastReadAt),
           userLastReadAt: validOrEmpty(thread.userLastReadAt),
           lastOrderInvoiceId: thread.lastOrderInvoiceId || null,
           updatedAt: threadUpdatedAt,
@@ -266,7 +280,11 @@ export function mergeChatThreads(localThreads = [], incomingThreads = []) {
       const existingUpdated = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
       const threadUpdated = new Date(threadUpdatedAt || thread.createdAt || 0).getTime();
       const newer = threadUpdated >= existingUpdated ? thread : existing;
-      const mergedMessages = mergeMessages(existing.messages, messages);
+      const deletedMessageIds = Array.from(new Set([
+        ...normalizeDeletedMessageIds(existing.deletedMessageIds),
+        ...normalizeDeletedMessageIds(thread.deletedMessageIds),
+      ])).slice(0, 300);
+      const mergedMessages = mergeMessages(existing.messages, messages, deletedMessageIds);
 
       byId.set(id, {
         ...existing,
@@ -278,6 +296,7 @@ export function mergeChatThreads(localThreads = [], incomingThreads = []) {
         messages: mergedMessages,
         adminMode: Boolean(newer.adminMode),
         activeAdmin: newer.activeAdmin || existing.activeAdmin || null,
+        deletedMessageIds,
         replacedThreadIds: Array.from(new Set([
           ...normalizeReplacedThreadIds(existing.replacedThreadIds),
           ...normalizeReplacedThreadIds(thread.replacedThreadIds),
@@ -302,7 +321,11 @@ function promoteGuestThreadToUser(identity, threads) {
   if (!guestThread) return null;
 
   const userThread = threads.find((thread) => thread.id === identity.id);
-  const mergedMessages = mergeMessages(guestThread.messages, userThread?.messages || []);
+  const deletedMessageIds = Array.from(new Set([
+    ...normalizeDeletedMessageIds(userThread?.deletedMessageIds),
+    ...normalizeDeletedMessageIds(guestThread.deletedMessageIds),
+  ])).slice(0, 300);
+  const mergedMessages = mergeMessages(guestThread.messages, userThread?.messages || [], deletedMessageIds);
   const promotedThread = {
     ...(userThread || guestThread),
     id: identity.id,
@@ -312,6 +335,7 @@ function promoteGuestThreadToUser(identity, threads) {
     messages: mergedMessages.length > 0 ? mergedMessages : [createInitialChatMessage()],
     adminMode: Boolean(userThread?.adminMode ?? guestThread.adminMode),
     activeAdmin: userThread?.activeAdmin || guestThread.activeAdmin || null,
+    deletedMessageIds,
     adminLastReadAt: newerIso(userThread?.adminLastReadAt, guestThread.adminLastReadAt),
     userLastReadAt: newerIso(userThread?.userLastReadAt, guestThread.userLastReadAt),
     lastOrderInvoiceId: userThread?.lastOrderInvoiceId || guestThread.lastOrderInvoiceId || null,
@@ -352,6 +376,7 @@ export function getChatThread(identity) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     replacedThreadIds: [],
+    deletedMessageIds: [],
     adminLastReadAt: '',
     userLastReadAt: '',
     lastOrderInvoiceId: null,
@@ -360,11 +385,13 @@ export function getChatThread(identity) {
 
 export function saveChatThread(nextThread) {
   const now = new Date().toISOString();
-  const normalizedMessages = mergeMessages([], nextThread.messages);
+  const deletedMessageIds = normalizeDeletedMessageIds(nextThread.deletedMessageIds);
+  const normalizedMessages = mergeMessages([], nextThread.messages, deletedMessageIds);
   const safeThread = {
     ...nextThread,
     messages: normalizedMessages,
     replacedThreadIds: normalizeReplacedThreadIds(nextThread.replacedThreadIds),
+    deletedMessageIds,
     adminLastReadAt: validOrEmpty(nextThread.adminLastReadAt),
     userLastReadAt: validOrEmpty(nextThread.userLastReadAt),
     lastOrderInvoiceId: nextThread.lastOrderInvoiceId || null,
@@ -377,7 +404,14 @@ export function saveChatThread(nextThread) {
     ? {
       ...existingThread,
       ...safeThread,
-      messages: mergeMessages(existingThread.messages, safeThread.messages),
+      deletedMessageIds: Array.from(new Set([
+        ...normalizeDeletedMessageIds(existingThread.deletedMessageIds),
+        ...normalizeDeletedMessageIds(safeThread.deletedMessageIds),
+      ])).slice(0, 300),
+      messages: mergeMessages(existingThread.messages, safeThread.messages, [
+        ...normalizeDeletedMessageIds(existingThread.deletedMessageIds),
+        ...normalizeDeletedMessageIds(safeThread.deletedMessageIds),
+      ]),
       createdAt: existingThread.createdAt || safeThread.createdAt,
       updatedAt: safeThread.updatedAt,
       adminLastReadAt: newerIso(existingThread.adminLastReadAt, safeThread.adminLastReadAt),
@@ -467,7 +501,11 @@ export function deleteChatMessage(threadId, messageId) {
   if (!threadId || !messageId) return { ok: false, reason: 'invalid_input' };
   const thread = getChatThreads().find((item) => item.id === threadId);
   if (!thread) return { ok: false, reason: 'thread_not_found' };
+  const deletedMessageIds = Array.from(new Set([
+    ...normalizeDeletedMessageIds(thread.deletedMessageIds),
+    String(messageId),
+  ])).slice(0, 300);
   const messages = (thread.messages || []).filter((message) => message.id !== messageId);
-  const saved = saveChatThread({ ...thread, messages });
+  const saved = saveChatThread({ ...thread, messages, deletedMessageIds });
   return { ok: true, thread: saved };
 }
