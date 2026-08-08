@@ -14,7 +14,7 @@ import {
   safeJsonParse,
 } from './lib/storage';
 import { autoRestockProducts } from './lib/productStock';
-import { hydrateCloudState, hydrateCloudStateKeys, writeCloudBackedValue } from './lib/cloudState';
+import { hydrateCloudStateKeys, writeCloudBackedValue } from './lib/cloudState';
 import { trackTrafficView } from './lib/trafficTracker';
 import { getAccountBlock, isAccountBlocked } from './lib/accountBlocks';
 
@@ -197,7 +197,7 @@ function App() {
     const timer = setInterval(async () => {
       await hydrateCloudStateKeys(['goisiin_blocked_users']);
       enforceAccountBlock();
-    }, 15000);
+    }, 60000);
     return () => {
       clearInterval(timer);
       window.removeEventListener('storage', enforceAccountBlock);
@@ -207,7 +207,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    hydrateCloudState().then((result) => {
+    hydrateCloudStateKeys(['goisiin_products', 'goisiin_blocked_users']).then((result) => {
       if (result.ok && result.hydrated > 0) {
         const normalizedProducts = normalizeStoredProducts(localStorage.getItem('goisiin_products'), initialProducts);
         const restocked = autoRestockProducts(normalizedProducts);
@@ -221,6 +221,7 @@ function App() {
 
   useEffect(() => {
     if (user?.email) {
+      hydrateCloudStateKeys(['goisiin_users', 'goisiin_blocked_users']);
       const userList = safeJsonParse(localStorage.getItem('goisiin_users'), []);
       if (!userList.some(u => u.email === user.email)) {
         userList.push({

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { productImages } from '../assets/images';
 import { stampRewards, stampTypes } from '../data/stampRewards';
 import { readStorageList, writeStorageList } from '../lib/storage';
@@ -62,12 +62,9 @@ const formatNumber = (num) => new Intl.NumberFormat('id-ID').format(Number(num |
 const cleanAdminText = (value, limit = 160) => String(value ?? '').trim().replace(/[<>`{}]/g, '').slice(0, limit);
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
 const makeAdminMessageId = (prefix = 'msg') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-const CHAT_SYNC_KEYS = [
-  'goisiin_chat_threads',
-  'goisiin_chat_messages',
-  'goisiin_chat_admin_mode',
-  'goisiin_chat_active_admin',
-];
+const CHAT_SYNC_KEYS = ['goisiin_chat_threads'];
+const ADMIN_CHAT_LIST_LIMIT = 60;
+const ADMIN_CHAT_MESSAGE_LIMIT = 120;
 const ORDER_NOTIFICATION_TEMPLATES = [
   {
     id: 'ask_issue',
@@ -200,13 +197,18 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const [trafficError, setTrafficError] = useState('');
   const [trafficRefreshTick, setTrafficRefreshTick] = useState(0);
 
-  // Load transactions and users from cloud-backed local cache + Supabase Auth
+  // Load transactions/users only when the related admin tabs need them.
   useEffect(() => {
+    if (!['transactions', 'users'].includes(activeTab)) return undefined;
     let isMounted = true;
     const loadData = async () => {
+      const keys = activeTab === 'transactions'
+        ? ['goisiin_transactions', 'goisiin_users', 'goisiin_wallet_ledger', 'goisiin_wallet_withdrawals']
+        : ['goisiin_users', 'goisiin_blocked_users', 'goisiin_wallet_ledger'];
+      await hydrateCloudStateKeys(keys);
       const transactions = readStorageList('goisiin_transactions');
       const cachedUsers = readStorageList('goisiin_users');
-      const authUsers = await fetchAuthUsersForAdmin();
+      const authUsers = activeTab === 'users' ? await fetchAuthUsersForAdmin() : [];
       const mergedUsers = mergeUsers(cachedUsers, authUsers);
 
       if (!isMounted) return;
@@ -218,12 +220,12 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       }
     };
     loadData();
-    const timer = setInterval(loadData, 7000);
+    const timer = setInterval(loadData, activeTab === 'users' ? 60000 : 30000);
     return () => {
       isMounted = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     const refreshBlocks = () => setAccountBlockRefreshKey((key) => key + 1);
@@ -278,7 +280,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       if (!cancelled) setAccountBlockRefreshKey((key) => key + 1);
     };
     syncBlockedUsers();
-    const timer = setInterval(syncBlockedUsers, 15000);
+    const timer = setInterval(syncBlockedUsers, 60000);
     return () => {
       cancelled = true;
       clearInterval(timer);
@@ -320,8 +322,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     }
   };
 
-  // Load chats from localStorage
   useEffect(() => {
+    if (activeTab !== 'chats') return undefined;
     const loadChats = () => {
       const threads = getChatThreads();
       setChatThreads(threads);
@@ -338,15 +340,21 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     };
 
     loadChats();
-    // Poll for changes every 2 seconds to simulate real-time updates
-    const pollTimer = setInterval(loadChats, 2000);
-    return () => clearInterval(pollTimer);
-  }, [selectedChatId]);
+    window.addEventListener('storage', loadChats);
+    window.addEventListener('goisiin:chat-threads-updated', loadChats);
+    window.addEventListener('goisiin:cloud-state-updated', loadChats);
+    return () => {
+      window.removeEventListener('storage', loadChats);
+      window.removeEventListener('goisiin:chat-threads-updated', loadChats);
+      window.removeEventListener('goisiin:cloud-state-updated', loadChats);
+    };
+  }, [activeTab, selectedChatId]);
 
   useEffect(() => {
     if (activeTab !== 'chats') return undefined;
     let cancelled = false;
     const syncChats = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       await hydrateCloudStateKeys(CHAT_SYNC_KEYS);
       if (cancelled) return;
       const threads = getChatThreads();
@@ -362,7 +370,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     };
 
     syncChats();
-    const timer = setInterval(syncChats, 4500);
+    const timer = setInterval(syncChats, 30000);
     return () => {
       cancelled = true;
       clearInterval(timer);
@@ -378,6 +386,20 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       setChatThreads(threads);
       setChatMessages(marked.messages || []);
     }
+  };
+
+  const refreshAdminChats = async () => {
+    await hydrateCloudStateKeys(CHAT_SYNC_KEYS);
+    const threads = getChatThreads();
+    setChatThreads(threads);
+    const nextSelectedId = selectedChatId && threads.some((thread) => thread.id === selectedChatId)
+      ? selectedChatId
+      : (threads[0]?.id || null);
+    if (nextSelectedId !== selectedChatId) setSelectedChatId(nextSelectedId);
+    const selectedThread = threads.find((thread) => thread.id === nextSelectedId);
+    setChatMessages(selectedThread?.messages || []);
+    setAdminMode(Boolean(selectedThread?.adminMode));
+    if (selectedThread?.activeAdmin) setActiveAdmin(selectedThread.activeAdmin);
   };
 
   const openUserChatFromEmail = (email) => {
@@ -828,11 +850,17 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const withdrawalRequests = walletRefreshKey >= 0 ? getWithdrawalRequests() : [];
   const adminActor = adminUser?.email || adminUser?.name || 'admin';
   const blockedAccounts = accountBlockRefreshKey >= 0 ? getBlockedAccounts() : [];
-  const chatThreadsWithStats = chatThreads.map((thread) => ({
+  const chatThreadsWithStats = useMemo(() => chatThreads.map((thread) => ({
     ...thread,
     stats: getChatThreadStats(thread),
-  }));
-  const displayedChatThreads = chatThreadsWithStats
+  })), [chatThreads]);
+  const filteredChatThreadsCount = useMemo(() => chatThreadsWithStats.filter((thread) => {
+    if (chatFilter === 'unread') return thread.stats.unreadForAdmin;
+    if (chatFilter === 'unanswered') return thread.stats.unanswered;
+    if (chatFilter === 'admin') return thread.adminMode;
+    return true;
+  }).length, [chatFilter, chatThreadsWithStats]);
+  const displayedChatThreads = useMemo(() => chatThreadsWithStats
     .filter((thread) => {
       if (chatFilter === 'unread') return thread.stats.unreadForAdmin;
       if (chatFilter === 'unanswered') return thread.stats.unanswered;
@@ -843,9 +871,20 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
       const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
       const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
       return chatSort === 'oldest' ? aTime - bTime : bTime - aTime;
-    });
-  const unreadAdminCount = chatThreadsWithStats.filter((thread) => thread.stats.unreadForAdmin).length;
-  const unansweredCount = chatThreadsWithStats.filter((thread) => thread.stats.unanswered).length;
+    })
+    .slice(0, ADMIN_CHAT_LIST_LIMIT), [chatFilter, chatSort, chatThreadsWithStats]);
+  const visibleChatMessages = useMemo(
+    () => chatMessages.slice(-ADMIN_CHAT_MESSAGE_LIMIT),
+    [chatMessages],
+  );
+  const unreadAdminCount = useMemo(
+    () => chatThreadsWithStats.filter((thread) => thread.stats.unreadForAdmin).length,
+    [chatThreadsWithStats],
+  );
+  const unansweredCount = useMemo(
+    () => chatThreadsWithStats.filter((thread) => thread.stats.unanswered).length,
+    [chatThreadsWithStats],
+  );
 
   const reloadBlockedAccounts = () => setAccountBlockRefreshKey((key) => key + 1);
 
@@ -1240,7 +1279,17 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                 <div className="mb-3">
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <label className="form-label text-secondary small mb-0">Percakapan Customer</label>
-                    <span className="badge bg-success">{displayedChatThreads.length}</span>
+                    <div className="d-flex align-items-center gap-2">
+                      <span className="badge bg-success">{displayedChatThreads.length}/{filteredChatThreadsCount}</span>
+                      <button
+                        type="button"
+                        className="btn btn-outline-success btn-sm py-0 px-2"
+                        style={{ fontSize: '0.72rem' }}
+                        onClick={refreshAdminChats}
+                      >
+                        Refresh
+                      </button>
+                    </div>
                   </div>
                   <div className="row g-2 mb-2">
                     <div className="col-7">
@@ -1267,6 +1316,11 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     </div>
                   </div>
                   <div className="d-flex flex-column gap-2" style={{ maxHeight: '260px', overflowY: 'auto' }}>
+                    {filteredChatThreadsCount > ADMIN_CHAT_LIST_LIMIT && (
+                      <div className="text-secondary small px-1">
+                        Menampilkan {ADMIN_CHAT_LIST_LIMIT} chat teratas. Pakai filter "Belum dibaca" / "Belum dijawab" untuk fokus.
+                      </div>
+                    )}
                     {displayedChatThreads.length === 0 ? (
                       <div className="text-secondary small border border-secondary rounded p-2">
                         Belum ada percakapan masuk.
@@ -1338,14 +1392,19 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                       {chatThreads.find((thread) => thread.id === selectedChatId)?.userName || 'Pengunjung'}
                     </span>
                   )}
+                  {chatMessages.length > ADMIN_CHAT_MESSAGE_LIMIT && (
+                    <span className="badge bg-secondary ms-2" style={{ fontSize: '0.7rem' }}>
+                      {ADMIN_CHAT_MESSAGE_LIMIT} pesan terakhir
+                    </span>
+                  )}
                 </h5>
 
                 {/* Message Box */}
                 <div className="flex-grow-1 border border-secondary rounded p-3 mb-3" style={{ overflowY: 'auto', background: 'rgba(0,0,0,0.2)' }}>
-                  {chatMessages.length === 0 ? (
+                  {visibleChatMessages.length === 0 ? (
                     <div className="text-center text-secondary py-5">Belum ada chat masuk.</div>
                   ) : (
-                    chatMessages.map(m => {
+                    visibleChatMessages.map(m => {
                       if (m.sender === 'system') {
                         return (
                           <div key={m.id} className="text-center my-2">

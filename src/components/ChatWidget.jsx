@@ -16,12 +16,7 @@ import { hydrateCloudStateKeys } from '../lib/cloudState';
 const MAX_MESSAGE_LENGTH = 600;
 const CLIENT_COOLDOWN_MS = 1800;
 const CHAT_HISTORY_LIMIT = 300;
-const CHAT_SYNC_KEYS = [
-  'goisiin_chat_threads',
-  'goisiin_chat_messages',
-  'goisiin_chat_admin_mode',
-  'goisiin_chat_active_admin',
-];
+const CHAT_SYNC_KEYS = ['goisiin_chat_threads'];
 const SAFE_AI_ERROR_MESSAGE = 'Maaf Kak, Vindy sedang kurang stabil. Aku teruskan ke Admin Goisiinn supaya dibantu langsung.';
 const makeMessageId = (prefix = 'msg') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
