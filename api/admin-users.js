@@ -20,7 +20,9 @@ function normalizeAuthUser(user) {
     email: cleanText(user.email, 160),
     picture: cleanText(metadata.avatar_url || metadata.picture || '', 500),
     registeredAt: cleanText(user.created_at, 80),
+    registeredAtIso: cleanText(user.created_at, 80),
     lastLogin: cleanText(user.last_sign_in_at || user.updated_at || user.created_at, 80),
+    lastLoginAt: cleanText(user.last_sign_in_at || user.updated_at || user.created_at, 80),
     source: 'supabase_auth',
   };
 }

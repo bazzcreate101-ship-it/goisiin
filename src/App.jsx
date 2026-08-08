@@ -11,12 +11,12 @@ import {
   findTransactionByInvoiceId,
   normalizeStoredProducts,
   readUserTransactions,
-  safeJsonParse,
 } from './lib/storage';
 import { autoRestockProducts } from './lib/productStock';
 import { hydrateCloudStateKeys, writeCloudBackedValue } from './lib/cloudState';
 import { trackTrafficView } from './lib/trafficTracker';
 import { getAccountBlock, isAccountBlocked } from './lib/accountBlocks';
+import { upsertUserActivity } from './lib/userActivity';
 
 const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
 const OrderView = React.lazy(() => import('./views/OrderView'));
@@ -146,7 +146,8 @@ function App() {
         setUser({
           name: session.user.user_metadata.full_name || session.user.email,
           email: session.user.email,
-          picture: session.user.user_metadata.avatar_url || null
+          picture: session.user.user_metadata.avatar_url || null,
+          registeredAtIso: session.user.created_at || '',
         });
       }
     });
@@ -163,7 +164,8 @@ function App() {
         setUser({
           name: session.user.user_metadata.full_name || session.user.email,
           email: session.user.email,
-          picture: session.user.user_metadata.avatar_url || null
+          picture: session.user.user_metadata.avatar_url || null,
+          registeredAtIso: session.user.created_at || '',
         });
         if (isAdminUrl()) return;
         if (window.location.hash.startsWith('#access_token=')) {
@@ -220,19 +222,30 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (user?.email) {
-      hydrateCloudStateKeys(['goisiin_users', 'goisiin_blocked_users']);
-      const userList = safeJsonParse(localStorage.getItem('goisiin_users'), []);
-      if (!userList.some(u => u.email === user.email)) {
-        userList.push({
-          name: user.name,
-          email: user.email,
-          picture: user.picture,
-          lastLogin: new Date().toLocaleString('id-ID')
-        });
-        writeCloudBackedValue('goisiin_users', userList);
-      }
-    }
+    if (!user?.email) return undefined;
+    let cancelled = false;
+    const loginMarkerKey = `goisiin_login_seen:${user.email}`;
+
+    const touch = async (event = 'online') => {
+      await hydrateCloudStateKeys(['goisiin_users', 'goisiin_blocked_users']);
+      if (cancelled) return;
+      upsertUserActivity(user, event);
+    };
+
+    const firstEvent = sessionStorage.getItem(loginMarkerKey) ? 'online' : 'login';
+    sessionStorage.setItem(loginMarkerKey, '1');
+    touch(firstEvent);
+
+    const timer = setInterval(() => touch('online'), 60 * 1000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') touch('online');
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [user]);
 
   const verifyAdminSession = async () => {
@@ -301,7 +314,13 @@ function App() {
       }
 
       if (route.view === 'invoice') {
-        setInvoiceData(findTransactionByInvoiceId(route.invoiceId));
+        const cachedInvoice = findTransactionByInvoiceId(route.invoiceId);
+        setInvoiceData(cachedInvoice);
+        if (!cachedInvoice) {
+          hydrateCloudStateKeys(['goisiin_transaction_deletions', 'goisiin_transactions']).then(() => {
+            setInvoiceData(findTransactionByInvoiceId(route.invoiceId));
+          });
+        }
         setCurrentView('invoice');
         return;
       }
@@ -350,6 +369,10 @@ function App() {
   }, []);
 
   const handleLogout = async () => {
+    if (user?.email) {
+      upsertUserActivity(user, 'logout');
+      sessionStorage.removeItem(`goisiin_login_seen:${user.email}`);
+    }
     await supabase.auth.signOut();
     setUser(null);
   };

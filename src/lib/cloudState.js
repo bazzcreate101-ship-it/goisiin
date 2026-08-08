@@ -1,4 +1,5 @@
 export const CLOUD_STATE_KEYS = [
+  'goisiin_transaction_deletions',
   'goisiin_transactions',
   'goisiin_users',
   'goisiin_blocked_users',
@@ -57,10 +58,58 @@ function mergeUsers(localUsers, cloudUsers) {
       name: user?.name || existing.name || email,
       picture: user?.picture || existing.picture || '',
       lastLogin: user?.lastLogin || existing.lastLogin || user?.registeredAt || existing.registeredAt || '',
+      lastLoginAt: newerIso(existing.lastLoginAt, user?.lastLoginAt),
+      lastLogoutAt: newerIso(existing.lastLogoutAt, user?.lastLogoutAt),
+      lastOnlineAt: newerIso(existing.lastOnlineAt, user?.lastOnlineAt),
+      onlineUntil: newerIso(existing.onlineUntil, user?.onlineUntil),
       registeredAt: user?.registeredAt || existing.registeredAt || '',
+      registeredAtIso: existing.registeredAtIso || user?.registeredAtIso || '',
     });
   });
   return Array.from(usersByEmail.values());
+}
+
+function mergeTransactions(localTransactions, cloudTransactions) {
+  const deletedIds = new Set([
+    ...((Array.isArray(readLocalValue('goisiin_transaction_deletions')) ? readLocalValue('goisiin_transaction_deletions') : [])
+      .map((item) => String(item?.invoiceId || '').trim())
+      .filter(Boolean)),
+  ]);
+  const byInvoice = new Map();
+  [...(Array.isArray(cloudTransactions) ? cloudTransactions : []), ...(Array.isArray(localTransactions) ? localTransactions : [])].forEach((transaction) => {
+    const invoiceId = String(transaction?.invoiceId || '').trim();
+    if (!invoiceId) return;
+    if (deletedIds.has(invoiceId)) return;
+    const existing = byInvoice.get(invoiceId) || {};
+    const existingTime = new Date(existing.updatedByAdminAt || existing.updatedAtIso || existing.createdAtIso || existing.createdAt || 0).getTime();
+    const incomingTime = new Date(transaction.updatedByAdminAt || transaction.updatedAtIso || transaction.createdAtIso || transaction.createdAt || 0).getTime();
+    const newer = incomingTime >= existingTime ? transaction : existing;
+    byInvoice.set(invoiceId, {
+      ...existing,
+      ...newer,
+      invoiceId,
+      userEmail: String(newer.userEmail || existing.userEmail || '').trim().toLowerCase(),
+    });
+  });
+  return Array.from(byInvoice.values())
+    .sort((a, b) => new Date(b.updatedByAdminAt || b.updatedAtIso || b.createdAtIso || b.createdAt || 0).getTime() - new Date(a.updatedByAdminAt || a.updatedAtIso || a.createdAtIso || a.createdAt || 0).getTime())
+    .slice(0, 1000);
+}
+
+function mergeTransactionDeletions(localDeletions, cloudDeletions) {
+  const byInvoice = new Map();
+  [...(Array.isArray(cloudDeletions) ? cloudDeletions : []), ...(Array.isArray(localDeletions) ? localDeletions : [])].forEach((item) => {
+    const invoiceId = String(item?.invoiceId || '').trim();
+    if (!invoiceId) return;
+    const existing = byInvoice.get(invoiceId) || {};
+    byInvoice.set(invoiceId, {
+      ...existing,
+      ...item,
+      invoiceId,
+      deletedAtIso: item?.deletedAtIso || existing.deletedAtIso || new Date().toISOString(),
+    });
+  });
+  return Array.from(byInvoice.values()).slice(-1000);
 }
 
 function formatChatTime(value = new Date()) {
@@ -261,6 +310,12 @@ function mergeChatThreads(localThreads, cloudThreads) {
 function mergeCloudValue(key, cloudValue) {
   if (key === 'goisiin_users' && hasLocalValue(key)) {
     return mergeUsers(readLocalValue(key), cloudValue);
+  }
+  if (key === 'goisiin_transactions' && hasLocalValue(key)) {
+    return mergeTransactions(readLocalValue(key), cloudValue);
+  }
+  if (key === 'goisiin_transaction_deletions' && hasLocalValue(key)) {
+    return mergeTransactionDeletions(readLocalValue(key), cloudValue);
   }
   if (key === 'goisiin_chat_threads' && hasLocalValue(key)) {
     return mergeChatThreads(readLocalValue(key), cloudValue);

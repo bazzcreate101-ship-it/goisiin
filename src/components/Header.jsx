@@ -4,6 +4,8 @@ import { getStampSummary } from '../lib/stampService';
 import { readStorageList } from '../lib/storage';
 import { getWalletBalance } from '../lib/walletService';
 
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
 export default function Header({ 
   currentView, 
   onNavigate, 
@@ -15,7 +17,7 @@ export default function Header({
 }) {
   const isLoggedIn = !!user;
   const userProfile = user;
-  const userTransactions = isLoggedIn ? readStorageList('goisiin_transactions').filter((tx) => tx.userEmail === user.email) : [];
+  const userTransactions = isLoggedIn ? readStorageList('goisiin_transactions').filter((tx) => normalizeEmail(tx.userEmail) === normalizeEmail(user.email)) : [];
   const successTransactions = userTransactions.filter((tx) => tx.status === 'success');
   const userPoints = successTransactions.reduce((sum, tx) => sum + Number(tx.points || 0), 0);
   const stampSummary = isLoggedIn ? getStampSummary(user.email) : null;

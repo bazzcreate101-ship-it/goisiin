@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { paymentImages } from '../assets/images';
 import { getStampSummary, normalizeEmail } from '../lib/stampService';
 import { buildDynamicQrisPayload } from '../lib/qris';
@@ -13,6 +13,7 @@ import {
   getWalletEntries,
   getWithdrawalRequests,
 } from '../lib/walletService';
+import { hydrateCloudStateKeys } from '../lib/cloudState';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -34,6 +35,24 @@ export default function WalletView({ user, onNavigate }) {
   });
   const [notice, setNotice] = useState('');
   const [, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const syncWalletData = async () => {
+      await hydrateCloudStateKeys([
+        'goisiin_transaction_deletions',
+        'goisiin_transactions',
+        'goisiin_wallet_ledger',
+        'goisiin_wallet_withdrawals',
+        'goisiin_stamp_events',
+      ]);
+      if (!cancelled) setRefreshKey((key) => key + 1);
+    };
+    syncWalletData();
+    return () => {
+      cancelled = true;
+    };
+  }, [userEmail]);
 
   const transactions = readStorageList('goisiin_transactions').filter((tx) => normalizeEmail(tx.userEmail) === userEmail);
   const successTransactions = transactions.filter((tx) => String(tx.status).toLowerCase() === 'success');
@@ -60,6 +79,7 @@ export default function WalletView({ user, onNavigate }) {
     const fee = qrisFee(amount);
     const total = amount + fee;
     const invoiceId = 'GSI-WALLET-' + Date.now().toString().slice(-8).toUpperCase();
+    const createdAtIso = new Date().toISOString();
     const invoiceData = {
       invoiceId,
       productId: 'goisiin-wallet',
@@ -76,7 +96,9 @@ export default function WalletView({ user, onNavigate }) {
       fee,
       total,
       points: 0,
-      createdAt: new Date().toLocaleString('id-ID'),
+      createdAt: new Date(createdAtIso).toLocaleString('id-ID'),
+      createdAtIso,
+      updatedAtIso: createdAtIso,
       expiresAt: Date.now() + 60 * 60 * 1000,
       status: 'pending',
       userEmail,

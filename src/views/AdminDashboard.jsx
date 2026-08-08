@@ -45,6 +45,7 @@ import {
   unblockAccount,
 } from '../lib/accountBlocks';
 import { hydrateCloudStateKeys } from '../lib/cloudState';
+import { formatActivityTime, isUserOnline } from '../lib/userActivity';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -109,12 +110,17 @@ function mergeUsers(...userLists) {
       name: cleanAdminText(user?.name || existing.name || email, 120),
       picture: user?.picture || existing.picture || '',
       lastLogin: user?.lastLogin || existing.lastLogin || user?.registeredAt || existing.registeredAt || '',
+      lastLoginAt: user?.lastLoginAt || existing.lastLoginAt || '',
+      lastLogoutAt: user?.lastLogoutAt || existing.lastLogoutAt || '',
+      lastOnlineAt: user?.lastOnlineAt || existing.lastOnlineAt || '',
+      onlineUntil: user?.onlineUntil || existing.onlineUntil || '',
       registeredAt: user?.registeredAt || existing.registeredAt || '',
+      registeredAtIso: existing.registeredAtIso || user?.registeredAtIso || '',
     });
   });
 
   return Array.from(usersByEmail.values())
-    .sort((a, b) => String(b.lastLogin || b.registeredAt || '').localeCompare(String(a.lastLogin || a.registeredAt || '')));
+    .sort((a, b) => new Date(b.lastOnlineAt || b.lastLoginAt || b.registeredAtIso || b.lastLogin || b.registeredAt || 0).getTime() - new Date(a.lastOnlineAt || a.lastLoginAt || a.registeredAtIso || a.lastLogin || a.registeredAt || 0).getTime());
 }
 
 function topEntries(value, limit = 6) {
@@ -203,7 +209,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
     let isMounted = true;
     const loadData = async () => {
       const keys = activeTab === 'transactions'
-        ? ['goisiin_transactions', 'goisiin_users', 'goisiin_wallet_ledger', 'goisiin_wallet_withdrawals']
+        ? ['goisiin_transaction_deletions', 'goisiin_transactions', 'goisiin_users', 'goisiin_wallet_ledger', 'goisiin_wallet_withdrawals']
         : ['goisiin_users', 'goisiin_blocked_users', 'goisiin_wallet_ledger'];
       await hydrateCloudStateKeys(keys);
       const transactions = readStorageList('goisiin_transactions');
@@ -296,6 +302,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
         const nextTx = {
           ...t,
           status: nextStatus,
+          updatedAtIso: new Date().toISOString(),
           refundableAmount: nextStatus === 'failed' && previousStatus === 'success' && t.transactionType !== 'wallet_topup'
             ? Number(t.total || 0)
             : Number(t.refundableAmount || 0),
@@ -317,6 +324,9 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
   const handleDeleteTx = (invoiceId) => {
     if (window.confirm(`Kakak yakin ingin menghapus invoice #${invoiceId}?`)) {
       const updated = adminTransactions.filter(t => t.invoiceId !== invoiceId);
+      const deletions = readStorageList('goisiin_transaction_deletions');
+      deletions.unshift({ invoiceId, deletedAtIso: new Date().toISOString(), actor: adminActor });
+      writeStorageList('goisiin_transaction_deletions', deletions);
       setAdminTransactions(updated);
       writeStorageList('goisiin_transactions', updated);
     }
@@ -567,9 +577,15 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
         total: Number(transactionEditForm.total || 0),
         status: cleanAdminText(transactionEditForm.status, 30) || transaction.status,
         createdAt: cleanAdminText(transactionEditForm.createdAt, 80) || transaction.createdAt,
+        updatedAtIso: new Date().toISOString(),
         updatedByAdminAt: new Date().toLocaleString('id-ID'),
       };
     });
+    if (safeInvoice !== originalInvoiceId) {
+      const deletions = readStorageList('goisiin_transaction_deletions');
+      deletions.unshift({ invoiceId: originalInvoiceId, deletedAtIso: new Date().toISOString(), actor: adminActor });
+      writeStorageList('goisiin_transaction_deletions', deletions);
+    }
     setAdminTransactions(updated);
     writeStorageList('goisiin_transactions', updated);
     setTransactionAdminNotice(`Transaksi #${originalInvoiceId} berhasil diedit.`);
@@ -1929,7 +1945,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     <th>Nama Lengkap</th>
                     <th>Email Pengguna</th>
                     <th>Saldo Goisiinn</th>
-                    <th>Tanggal Terdaftar / Login Terakhir</th>
+                    <th>Aktivitas Akun</th>
                     <th>Status</th>
                     <th>Aksi</th>
                   </tr>
@@ -1943,6 +1959,7 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                     adminUsers.map((u, i) => {
                       const block = getAccountBlock(u.email);
                       const blocked = Boolean(block);
+                      const online = isUserOnline(u);
                       return (
                       <tr key={i} className={blocked ? 'table-danger' : ''}>
                         <td>
@@ -1958,7 +1975,17 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                         <td className="fw-semibold text-white">{u.name}</td>
                         <td>{u.email}</td>
                         <td className="text-success fw-bold">{formatRupiah(getWalletBalance(u.email))}</td>
-                        <td>{u.lastLogin || 'N/A'}</td>
+                        <td>
+                          <span className={`badge ${online ? 'bg-success' : 'bg-secondary'} mb-1`}>
+                            {online ? 'Online' : 'Offline'}
+                          </span>
+                          <div style={{ fontSize: '0.75rem' }}>
+                            <div>Daftar: {formatActivityTime(u.registeredAtIso) || u.registeredAt || '-'}</div>
+                            <div>Login: {formatActivityTime(u.lastLoginAt) || u.lastLogin || '-'}</div>
+                            <div>Logout: {formatActivityTime(u.lastLogoutAt) || '-'}</div>
+                            <div>Online terakhir: {formatActivityTime(u.lastOnlineAt) || '-'}</div>
+                          </div>
+                        </td>
                         <td>
                           {blocked ? (
                             <div>

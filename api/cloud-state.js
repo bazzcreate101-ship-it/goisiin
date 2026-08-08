@@ -12,6 +12,7 @@ const TABLE_NAME = 'goisiin_app_state';
 
 const ALLOWED_KEYS = new Set([
   'goisiin_transactions',
+  'goisiin_transaction_deletions',
   'goisiin_users',
   'goisiin_blocked_users',
   'goisiin_products',
@@ -56,6 +57,73 @@ function sanitizeValue(value) {
   if (typeof value === 'string') return cleanText(value, 2000);
   if (value && typeof value === 'object') return value;
   return null;
+}
+
+function mergeUsers(existingUsers, incomingUsers) {
+  const usersByEmail = new Map();
+  [...(Array.isArray(existingUsers) ? existingUsers : []), ...(Array.isArray(incomingUsers) ? incomingUsers : [])].forEach((user) => {
+    const email = cleanText(user?.email || '', 160).toLowerCase();
+    if (!email) return;
+    const existing = usersByEmail.get(email) || {};
+    usersByEmail.set(email, {
+      ...existing,
+      ...user,
+      email,
+      name: cleanText(user?.name || existing.name || email, 160),
+      picture: cleanText(user?.picture || existing.picture || '', 300),
+      lastLogin: cleanText(user?.lastLogin || existing.lastLogin || user?.registeredAt || existing.registeredAt || '', 100),
+      lastLoginAt: newerIso(existing.lastLoginAt, user?.lastLoginAt),
+      lastLogoutAt: newerIso(existing.lastLogoutAt, user?.lastLogoutAt),
+      lastOnlineAt: newerIso(existing.lastOnlineAt, user?.lastOnlineAt),
+      onlineUntil: newerIso(existing.onlineUntil, user?.onlineUntil),
+      registeredAt: cleanText(existing.registeredAt || user?.registeredAt || '', 100),
+      registeredAtIso: cleanText(existing.registeredAtIso || user?.registeredAtIso || '', 100),
+    });
+  });
+  return Array.from(usersByEmail.values()).slice(0, 1000);
+}
+
+function transactionTime(transaction) {
+  return new Date(transaction?.updatedByAdminAt || transaction?.updatedAtIso || transaction?.createdAtIso || transaction?.createdAt || 0).getTime() || 0;
+}
+
+function mergeTransactionDeletions(existingDeletions, incomingDeletions) {
+  const byInvoice = new Map();
+  [...(Array.isArray(existingDeletions) ? existingDeletions : []), ...(Array.isArray(incomingDeletions) ? incomingDeletions : [])].forEach((item) => {
+    const invoiceId = cleanText(item?.invoiceId || '', 100);
+    if (!invoiceId) return;
+    const existing = byInvoice.get(invoiceId) || {};
+    byInvoice.set(invoiceId, {
+      ...existing,
+      ...item,
+      invoiceId,
+      deletedAtIso: cleanText(item?.deletedAtIso || existing.deletedAtIso || new Date().toISOString(), 100),
+    });
+  });
+  return Array.from(byInvoice.values()).slice(-1000);
+}
+
+function mergeTransactions(existingTransactions, incomingTransactions, deletions = []) {
+  const deletedIds = new Set((Array.isArray(deletions) ? deletions : [])
+    .map((item) => cleanText(item?.invoiceId || '', 100))
+    .filter(Boolean));
+  const byInvoice = new Map();
+  [...(Array.isArray(existingTransactions) ? existingTransactions : []), ...(Array.isArray(incomingTransactions) ? incomingTransactions : [])].forEach((transaction) => {
+    const invoiceId = cleanText(transaction?.invoiceId || '', 100);
+    if (!invoiceId) return;
+    if (deletedIds.has(invoiceId)) return;
+    const existing = byInvoice.get(invoiceId) || {};
+    const newer = transactionTime(transaction) >= transactionTime(existing) ? transaction : existing;
+    byInvoice.set(invoiceId, {
+      ...existing,
+      ...newer,
+      invoiceId,
+      userEmail: cleanText(newer.userEmail || existing.userEmail || '', 160).toLowerCase(),
+    });
+  });
+  return Array.from(byInvoice.values())
+    .sort((a, b) => transactionTime(b) - transactionTime(a))
+    .slice(0, 1000);
 }
 
 function formatChatTime(value = new Date()) {
@@ -273,6 +341,23 @@ async function readState(keys) {
 
 async function writeState(updates) {
   const nextUpdates = { ...updates };
+  let transactionDeletions = [];
+  if (Array.isArray(nextUpdates.goisiin_transaction_deletions)) {
+    const existing = await readState(['goisiin_transaction_deletions']);
+    nextUpdates.goisiin_transaction_deletions = mergeTransactionDeletions(existing.goisiin_transaction_deletions, nextUpdates.goisiin_transaction_deletions);
+    transactionDeletions = nextUpdates.goisiin_transaction_deletions;
+  } else if (Array.isArray(nextUpdates.goisiin_transactions)) {
+    const existing = await readState(['goisiin_transaction_deletions']);
+    transactionDeletions = Array.isArray(existing.goisiin_transaction_deletions) ? existing.goisiin_transaction_deletions : [];
+  }
+  if (Array.isArray(nextUpdates.goisiin_transactions)) {
+    const existing = await readState(['goisiin_transactions']);
+    nextUpdates.goisiin_transactions = mergeTransactions(existing.goisiin_transactions, nextUpdates.goisiin_transactions, transactionDeletions);
+  }
+  if (Array.isArray(nextUpdates.goisiin_users)) {
+    const existing = await readState(['goisiin_users']);
+    nextUpdates.goisiin_users = mergeUsers(existing.goisiin_users, nextUpdates.goisiin_users);
+  }
   if (Array.isArray(nextUpdates.goisiin_chat_threads)) {
     const existing = await readState(['goisiin_chat_threads']);
     nextUpdates.goisiin_chat_threads = mergeChatThreads(existing.goisiin_chat_threads, nextUpdates.goisiin_chat_threads);

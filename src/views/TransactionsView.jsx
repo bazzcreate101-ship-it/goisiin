@@ -1,25 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { readStorageList } from '../lib/storage';
+import { hydrateCloudStateKeys } from '../lib/cloudState';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+const transactionTime = (tx) => new Date(tx?.updatedAtIso || tx?.createdAtIso || tx?.createdAt || 0).getTime() || 0;
 
 export default function TransactionsView({ user, onNavigate }) {
   const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
+    let cancelled = false;
     const loadTransactions = () => {
       const list = readStorageList('goisiin_transactions');
+      const sortedList = list.slice().sort((a, b) => transactionTime(b) - transactionTime(a));
       // Filter by current user email if logged in
       if (user?.email) {
-        setTransactions(list.filter(t => t.userEmail === user.email));
+        const userEmail = normalizeEmail(user.email);
+        setTransactions(sortedList.filter(t => normalizeEmail(t.userEmail) === userEmail));
       } else {
-        setTransactions(list);
+        setTransactions(sortedList);
       }
     };
+    const syncTransactions = async () => {
+      await hydrateCloudStateKeys(['goisiin_transaction_deletions', 'goisiin_transactions']);
+      if (!cancelled) loadTransactions();
+    };
     loadTransactions();
+    syncTransactions();
     window.addEventListener('storage', loadTransactions);
     window.addEventListener('goisiin:cloud-state-updated', loadTransactions);
     return () => {
+      cancelled = true;
       window.removeEventListener('storage', loadTransactions);
       window.removeEventListener('goisiin:cloud-state-updated', loadTransactions);
     };

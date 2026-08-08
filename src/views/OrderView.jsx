@@ -126,6 +126,7 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
       const invoiceId = 'GSI-' + Date.now().toString().slice(-8).toUpperCase();
       const total = calcTotal();
       const isWalletPayment = selectedPayment.id === 'goisiin_balance';
+      const createdAtIso = new Date().toISOString();
       const invoiceData = {
         invoiceId,
         productId: product.id,
@@ -142,7 +143,9 @@ export default function OrderView({ productId, products, onNavigate, user, onLog
         fee: calcFee(),
         total,
         points: Number(selectedDenom.points || 0),
-        createdAt: new Date().toLocaleString('id-ID'),
+        createdAt: new Date(createdAtIso).toLocaleString('id-ID'),
+        createdAtIso,
+        updatedAtIso: createdAtIso,
         expiresAt: Date.now() + 60 * 60 * 1000,
         status: isWalletPayment ? 'success' : 'pending',
         userEmail: user.email,

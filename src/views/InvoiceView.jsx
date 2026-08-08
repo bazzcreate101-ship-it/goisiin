@@ -4,6 +4,7 @@ import { readStorageList, writeStorageList } from '../lib/storage';
 import { awardStampForTransaction } from '../lib/stampService';
 import { buildDynamicQrisPayload } from '../lib/qris';
 import { settleWalletEffectsForTransaction } from '../lib/walletService';
+import { hydrateCloudStateKeys } from '../lib/cloudState';
 
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
@@ -15,16 +16,24 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
   // Sync status on mount/update
   useEffect(() => {
     if (invoiceData?.invoiceId) {
-      const list = readStorageList('goisiin_transactions');
-      if (list.length > 0) {
-        const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
-        if (found) {
-          setPaymentStatus(found.status);
-          if (found.status === 'success') awardStampForTransaction(found, 'invoice-check');
-          settleWalletEffectsForTransaction(found, 'invoice-check');
+      let alive = true;
+      const syncInvoice = async () => {
+        await hydrateCloudStateKeys(['goisiin_transaction_deletions', 'goisiin_transactions', 'goisiin_wallet_ledger', 'goisiin_stamp_events']);
+        if (!alive) return;
+        const list = readStorageList('goisiin_transactions');
+        if (list.length > 0) {
+          const found = list.find(t => t.invoiceId === invoiceData.invoiceId);
+          if (found) {
+            setPaymentStatus(found.status);
+            if (found.status === 'success') awardStampForTransaction(found, 'invoice-check');
+            settleWalletEffectsForTransaction(found, 'invoice-check');
+          }
         }
-      }
+      };
+      syncInvoice();
+      return () => { alive = false; };
     }
+    return undefined;
   }, [invoiceData]);
 
   useEffect(() => {
@@ -60,7 +69,7 @@ export default function InvoiceView({ invoiceData, onNavigate }) {
           if (list.length > 0) {
             const updated = list.map(t => {
               if (t.invoiceId === invoiceData?.invoiceId) {
-                const failedTx = { ...t, status: 'failed' };
+                const failedTx = { ...t, status: 'failed', updatedAtIso: new Date().toISOString() };
                 settleWalletEffectsForTransaction(failedTx, 'invoice-timeout');
                 return failedTx;
               }

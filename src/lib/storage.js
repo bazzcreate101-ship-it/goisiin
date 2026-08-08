@@ -1,5 +1,7 @@
 import { queueCloudStateWrite } from './cloudState';
 
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
 export function safeJsonParse(value, fallback) {
   try {
     return value ? JSON.parse(value) : fallback;
@@ -10,7 +12,15 @@ export function safeJsonParse(value, fallback) {
 
 export function readStorageList(key) {
   const parsed = safeJsonParse(localStorage.getItem(key), []);
-  return Array.isArray(parsed) ? parsed.slice(0, 500) : [];
+  if (!Array.isArray(parsed)) return [];
+  if (key === 'goisiin_transactions') {
+    const deletions = safeJsonParse(localStorage.getItem('goisiin_transaction_deletions'), []);
+    const deletedIds = new Set((Array.isArray(deletions) ? deletions : [])
+      .map((item) => String(item?.invoiceId || '').trim())
+      .filter(Boolean));
+    return parsed.filter((transaction) => !deletedIds.has(String(transaction?.invoiceId || '').trim())).slice(0, 500);
+  }
+  return parsed.slice(0, 500);
 }
 
 export function writeStorageList(key, value) {
@@ -22,7 +32,8 @@ export function writeStorageList(key, value) {
 export function readUserTransactions(user) {
   const transactions = readStorageList('goisiin_transactions');
   if (!user?.email) return [];
-  return transactions.filter((transaction) => transaction.userEmail === user.email);
+  const userEmail = normalizeEmail(user.email);
+  return transactions.filter((transaction) => normalizeEmail(transaction.userEmail) === userEmail);
 }
 
 export function findTransactionByInvoiceId(invoiceId) {
