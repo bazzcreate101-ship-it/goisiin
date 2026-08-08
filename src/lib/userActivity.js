@@ -5,10 +5,23 @@ const ONLINE_WINDOW_MS = 3 * 60 * 1000;
 
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 
-export function formatActivityTime(value) {
+export function parseActivityDate(value) {
   if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value || '');
+  const normalized = String(value)
+    .trim()
+    .replace(/\.(\d{3})\d+(Z|[+-]\d{2}:?\d{2})$/, '.$1$2');
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function getActivityTime(value) {
+  const date = parseActivityDate(value);
+  return date ? date.getTime() : 0;
+}
+
+export function formatActivityTime(value) {
+  const date = parseActivityDate(value);
+  if (!date) return '';
   return new Intl.DateTimeFormat('id-ID', {
     timeZone: 'Asia/Jakarta',
     day: '2-digit',
@@ -20,8 +33,8 @@ export function formatActivityTime(value) {
 }
 
 export function isUserOnline(user) {
-  const onlineUntil = new Date(user?.onlineUntil || 0).getTime();
-  return Number.isFinite(onlineUntil) && onlineUntil > Date.now();
+  const onlineUntil = getActivityTime(user?.onlineUntil);
+  return onlineUntil > Date.now();
 }
 
 export function upsertUserActivity(user, event = 'online') {

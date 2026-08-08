@@ -45,7 +45,7 @@ import {
   unblockAccount,
 } from '../lib/accountBlocks';
 import { hydrateCloudStateKeys } from '../lib/cloudState';
-import { formatActivityTime, isUserOnline } from '../lib/userActivity';
+import { formatActivityTime, getActivityTime, isUserOnline } from '../lib/userActivity';
 
 const initialCategories = [
   { id: '1', name: 'Top up Game' },
@@ -120,7 +120,10 @@ function mergeUsers(...userLists) {
   });
 
   return Array.from(usersByEmail.values())
-    .sort((a, b) => new Date(b.lastOnlineAt || b.lastLoginAt || b.registeredAtIso || b.lastLogin || b.registeredAt || 0).getTime() - new Date(a.lastOnlineAt || a.lastLoginAt || a.registeredAtIso || a.lastLogin || a.registeredAt || 0).getTime());
+    .sort((a, b) => (
+      getActivityTime(b.lastOnlineAt || b.lastLoginAt || b.registeredAtIso || b.lastLogin || b.registeredAt) -
+      getActivityTime(a.lastOnlineAt || a.lastLoginAt || a.registeredAtIso || a.lastLogin || a.registeredAt)
+    ));
 }
 
 function topEntries(value, limit = 6) {
@@ -1980,8 +1983,8 @@ export default function AdminDashboard({ products, onUpdateProducts, adminUser, 
                             {online ? 'Online' : 'Offline'}
                           </span>
                           <div style={{ fontSize: '0.75rem' }}>
-                            <div>Daftar: {formatActivityTime(u.registeredAtIso) || u.registeredAt || '-'}</div>
-                            <div>Login: {formatActivityTime(u.lastLoginAt) || u.lastLogin || '-'}</div>
+                            <div>Daftar pertama: {formatActivityTime(u.registeredAtIso || u.registeredAt) || '-'}</div>
+                            <div>Login terakhir: {formatActivityTime(u.lastLoginAt || u.lastLogin) || '-'}</div>
                             <div>Logout: {formatActivityTime(u.lastLogoutAt) || '-'}</div>
                             <div>Online terakhir: {formatActivityTime(u.lastOnlineAt) || '-'}</div>
                           </div>
