@@ -91,6 +91,7 @@ function hasCompromisedText(value) {
     'depositphotos.com/1496387/14240',
     'middle-finger',
     'fuck-you',
+    'website ini adalah penipuan',
     'judol',
     'slot gacor',
     'casino',
@@ -150,6 +151,15 @@ function sanitizeChatThreads(value) {
     });
 }
 
+function sanitizeChatMessages(value) {
+  if (!Array.isArray(value)) return value;
+  return value.filter((message) => {
+    if (!message || typeof message !== 'object') return false;
+    if (hasCompromisedText(JSON.stringify(message))) return false;
+    return Boolean(cleanText(message.text || '', 1200));
+  });
+}
+
 function sanitizeWalletLedger(value) {
   if (!Array.isArray(value)) return value;
   return value.map((entry) => {
@@ -178,6 +188,7 @@ function sanitizeWithdrawals(value) {
 
 function sanitizeStateValue(key, value) {
   if (key === 'goisiin_products' && isCompromisedProductState(value)) return [];
+  if (key === 'goisiin_chat_messages') return sanitizeChatMessages(value);
   if (key === 'goisiin_chat_threads') return sanitizeChatThreads(value);
   if (key === 'goisiin_wallet_ledger') return sanitizeWalletLedger(value);
   if (key === 'goisiin_wallet_withdrawals') return sanitizeWithdrawals(value);
