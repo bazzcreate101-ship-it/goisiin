@@ -80,6 +80,11 @@ function sanitizeValue(value) {
 function isCompromisedProductState(value) {
   if (!Array.isArray(value)) return false;
   const serialized = JSON.stringify(value).toLowerCase();
+  return hasCompromisedText(serialized) || hasRepeatedProductNames(value);
+}
+
+function hasCompromisedText(value) {
+  const text = String(value || '').toLowerCase();
   const blockedPatterns = [
     'web nipu',
     'kontol',
@@ -90,11 +95,96 @@ function isCompromisedProductState(value) {
     'slot gacor',
     'casino',
   ];
-  if (blockedPatterns.some((pattern) => serialized.includes(pattern))) return true;
+  return blockedPatterns.some((pattern) => text.includes(pattern));
+}
 
+function hasRepeatedProductNames(value) {
   const namedProducts = value.filter((product) => cleanText(product?.name || '', 120));
   const uniqueNames = new Set(namedProducts.map((product) => cleanText(product.name, 120).toLowerCase()));
   return namedProducts.length > 1 && uniqueNames.size === 1;
+}
+
+function scrubCompromisedStrings(value) {
+  if (typeof value === 'string') return hasCompromisedText(value) ? '' : value;
+  if (Array.isArray(value)) {
+    return value
+      .map(scrubCompromisedStrings)
+      .filter((item) => {
+        if (item === '') return false;
+        if (item && typeof item === 'object') return Object.keys(item).length > 0;
+        return true;
+      });
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .map(([key, item]) => [key, scrubCompromisedStrings(item)])
+        .filter(([, item]) => item !== ''),
+    );
+  }
+  return value;
+}
+
+function sanitizeChatThreads(value) {
+  if (!Array.isArray(value)) return value;
+  return value
+    .map((thread) => {
+      if (!thread || typeof thread !== 'object') return null;
+      const messages = Array.isArray(thread.messages)
+        ? thread.messages.filter((message) => !hasCompromisedText(JSON.stringify(message)))
+        : [];
+      const userName = hasCompromisedText(thread.userName) ? 'Pengunjung' : thread.userName;
+      const activeAdmin = hasCompromisedText(thread.activeAdmin) ? null : thread.activeAdmin;
+      return {
+        ...thread,
+        userName,
+        activeAdmin,
+        adminMode: activeAdmin ? Boolean(thread.adminMode) : false,
+        messages,
+      };
+    })
+    .filter((thread) => {
+      if (!thread) return false;
+      if (hasCompromisedText(thread.userEmail)) return false;
+      return thread.messages.length > 0 || !thread.isGuest;
+    });
+}
+
+function sanitizeWalletLedger(value) {
+  if (!Array.isArray(value)) return value;
+  return value.map((entry) => {
+    if (!entry || typeof entry !== 'object') return entry;
+    if (!hasCompromisedText(JSON.stringify(entry))) return entry;
+    return {
+      ...scrubCompromisedStrings(entry),
+      kind: hasCompromisedText(entry.kind) ? 'wallet_adjustment' : entry.kind,
+      note: hasCompromisedText(entry.note) ? 'Penyesuaian saldo Goisiinn' : entry.note,
+    };
+  });
+}
+
+function sanitizeWithdrawals(value) {
+  if (!Array.isArray(value)) return value;
+  return value.map((withdrawal) => {
+    if (!withdrawal || typeof withdrawal !== 'object') return withdrawal;
+    if (!hasCompromisedText(JSON.stringify(withdrawal))) return withdrawal;
+    return {
+      ...scrubCompromisedStrings(withdrawal),
+      provider: hasCompromisedText(withdrawal.provider) ? 'Bank/E-Wallet' : withdrawal.provider,
+      accountName: hasCompromisedText(withdrawal.accountName) ? '' : withdrawal.accountName,
+    };
+  });
+}
+
+function sanitizeStateValue(key, value) {
+  if (key === 'goisiin_products' && isCompromisedProductState(value)) return [];
+  if (key === 'goisiin_chat_threads') return sanitizeChatThreads(value);
+  if (key === 'goisiin_wallet_ledger') return sanitizeWalletLedger(value);
+  if (key === 'goisiin_wallet_withdrawals') return sanitizeWithdrawals(value);
+  if (key === 'goisiin_chat_active_admin' && hasCompromisedText(value)) return null;
+  if (key === 'goisiin_chat_admin_mode' && hasCompromisedText(JSON.stringify(value))) return false;
+  if (hasCompromisedText(JSON.stringify(value))) return scrubCompromisedStrings(value);
+  return value;
 }
 
 async function writeRowsRaw(rows) {
@@ -388,9 +478,17 @@ async function readState(keys) {
     return acc;
   }, {});
 
-  if (isCompromisedProductState(state.goisiin_products)) {
-    state.goisiin_products = [];
-    await writeRowsRaw([{ key: 'goisiin_products', value: [] }]);
+  const healedRows = [];
+  Object.keys(state).forEach((key) => {
+    const healed = sanitizeStateValue(key, state[key]);
+    if (JSON.stringify(healed) !== JSON.stringify(state[key])) {
+      state[key] = healed;
+      healedRows.push({ key, value: healed });
+    }
+  });
+
+  if (healedRows.length > 0) {
+    await writeRowsRaw(healedRows);
   }
 
   return state;
