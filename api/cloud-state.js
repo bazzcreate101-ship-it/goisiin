@@ -1,9 +1,12 @@
 import {
   cleanText,
   clampArray,
+  getAdminSecret,
+  readBearer,
   getClientIp,
   rateLimit,
   sendJson,
+  verifySignedToken,
 } from './_security.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
@@ -18,6 +21,21 @@ const ALLOWED_KEYS = new Set([
   'goisiin_products',
   'goisiin_chat_threads',
   'goisiin_chat_messages',
+  'goisiin_chat_admin_mode',
+  'goisiin_chat_active_admin',
+  'goisiin_wallet_ledger',
+  'goisiin_wallet_withdrawals',
+  'goisiin_stamp_events',
+  'goisiin_stamp_redemptions',
+  'goisiin_stamp_redeem_codes',
+  'goisiin_stamp_audit_logs',
+  'goisiin_stamp_voucher_codes',
+]);
+
+const ADMIN_ONLY_KEYS = new Set([
+  'goisiin_transaction_deletions',
+  'goisiin_blocked_users',
+  'goisiin_products',
   'goisiin_chat_admin_mode',
   'goisiin_chat_active_admin',
   'goisiin_wallet_ledger',
@@ -419,6 +437,19 @@ export default async function handler(req, res) {
     const updates = body.updates && typeof body.updates === 'object'
       ? body.updates
       : { [body.key]: body.value };
+    const updateKeys = Object.keys(updates || {}).map(sanitizeKey).filter(Boolean);
+    const requiresAdmin = updateKeys.some((key) => ADMIN_ONLY_KEYS.has(key));
+
+    if (requiresAdmin) {
+      const payload = verifySignedToken(readBearer(req), getAdminSecret());
+      if (!payload || payload.typ !== 'admin') {
+        return sendJson(res, 401, {
+          ok: false,
+          error: 'Unauthorized',
+        });
+      }
+    }
+
     const written = await writeState(updates);
     return sendJson(res, 200, { ok: true, written });
   } catch (error) {

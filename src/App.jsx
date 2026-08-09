@@ -127,9 +127,6 @@ function App() {
   const [products, setProducts] = useState(() => {
     const normalizedProducts = normalizeStoredProducts(localStorage.getItem('goisiin_products'), initialProducts);
     const restocked = autoRestockProducts(normalizedProducts);
-    if (restocked.changed > 0) {
-      writeCloudBackedValue('goisiin_products', restocked.products);
-    }
     return restocked.products;
   });
 
@@ -214,9 +211,6 @@ function App() {
         const normalizedProducts = normalizeStoredProducts(localStorage.getItem('goisiin_products'), initialProducts);
         const restocked = autoRestockProducts(normalizedProducts);
         setProducts(restocked.products);
-        if (restocked.changed > 0) {
-          writeCloudBackedValue('goisiin_products', restocked.products);
-        }
       }
     });
   }, []);
@@ -390,10 +384,14 @@ function App() {
     window.location.href = '/';
   };
 
-  const handleUpdateProducts = (newProducts) => {
+  const handleUpdateProducts = (newProducts, options = {}) => {
     const restocked = autoRestockProducts(newProducts);
     setProducts(restocked.products);
-    writeCloudBackedValue('goisiin_products', restocked.products);
+    if (options.persist) {
+      writeCloudBackedValue('goisiin_products', restocked.products);
+    } else {
+      localStorage.setItem('goisiin_products', JSON.stringify(restocked.products));
+    }
   };
 
   useEffect(() => {
@@ -401,7 +399,7 @@ function App() {
       setProducts((currentProducts) => {
         const restocked = autoRestockProducts(currentProducts);
         if (restocked.changed > 0) {
-          writeCloudBackedValue('goisiin_products', restocked.products);
+          localStorage.setItem('goisiin_products', JSON.stringify(restocked.products));
           return restocked.products;
         }
         return currentProducts;
@@ -492,7 +490,7 @@ function App() {
       <React.Suspense fallback={<div className="main main-surface d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}><div className="text-success fw-bold">Memuat dashboard admin...</div></div>}>
         <AdminDashboard
           products={products}
-          onUpdateProducts={handleUpdateProducts}
+          onUpdateProducts={(nextProducts) => handleUpdateProducts(nextProducts, { persist: true })}
           adminUser={adminUser}
           onLogout={handleAdminLogout}
           onNavigate={handleNavigate}

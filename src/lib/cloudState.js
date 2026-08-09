@@ -17,6 +17,22 @@ export const CLOUD_STATE_KEYS = [
   'goisiin_stamp_voucher_codes',
 ];
 
+const ADMIN_TOKEN_KEY = 'goisiin_admin_token';
+const ADMIN_ONLY_CLOUD_KEYS = new Set([
+  'goisiin_transaction_deletions',
+  'goisiin_blocked_users',
+  'goisiin_products',
+  'goisiin_chat_admin_mode',
+  'goisiin_chat_active_admin',
+  'goisiin_wallet_ledger',
+  'goisiin_wallet_withdrawals',
+  'goisiin_stamp_events',
+  'goisiin_stamp_redemptions',
+  'goisiin_stamp_redeem_codes',
+  'goisiin_stamp_audit_logs',
+  'goisiin_stamp_voucher_codes',
+]);
+
 const pendingWrites = new Map();
 let flushTimer = null;
 let cloudSyncEnabled = true;
@@ -331,9 +347,13 @@ export function notifyLocalStateChanged() {
 async function postCloudState(updates) {
   if (!cloudSyncEnabled || !updates || Object.keys(updates).length === 0) return false;
   try {
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem(ADMIN_TOKEN_KEY) : '';
     const response = await fetch('/api/cloud-state', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ updates }),
     });
     if (response.status === 503) cloudSyncEnabled = false;
@@ -345,6 +365,7 @@ async function postCloudState(updates) {
 
 export function queueCloudStateWrite(key, value) {
   if (!CLOUD_STATE_KEYS.includes(key)) return;
+  if (ADMIN_ONLY_CLOUD_KEYS.has(key) && !sessionStorage.getItem(ADMIN_TOKEN_KEY)) return;
   pendingWrites.set(key, value);
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = setTimeout(() => {

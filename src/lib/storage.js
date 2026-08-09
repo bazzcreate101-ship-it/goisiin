@@ -62,26 +62,34 @@ export function normalizeStoredProducts(savedProducts, fallbackProducts) {
     }
 
     const savedProduct = mergedById.get(product.id);
-    const savedText = JSON.stringify(savedProduct).toLowerCase();
-    const fallbackDenominationIds = new Set((product.denominations || []).map((denom) => denom.id));
-    const savedDenominationIds = new Set((savedProduct.denominations || []).map((denom) => denom.id));
-    const savedHasUnknownDenomination = (savedProduct.denominations || [])
-      .some((denom) => !fallbackDenominationIds.has(denom.id));
-    const savedMissingCurrentDenomination = (product.denominations || [])
-      .some((denom) => !savedDenominationIds.has(denom.id));
-    const shouldReplaceStaleAiCatalog = product.id === 'kebutuhan-ai' && (
-      savedText.includes('sharing') ||
-      savedHasUnknownDenomination ||
-      savedMissingCurrentDenomination
+    const fallbackDenominations = Array.isArray(product.denominations) ? product.denominations : [];
+    const savedDenominationsById = new Map(
+      (Array.isArray(savedProduct.denominations) ? savedProduct.denominations : [])
+        .filter((denom) => denom?.id)
+        .map((denom) => [denom.id, denom]),
     );
 
-    if (shouldReplaceStaleAiCatalog) {
-      mergedById.set(product.id, normalize({
-        ...product,
-        active: savedProduct.active !== false,
-        popular: savedProduct.popular ?? product.popular,
-      }));
-    }
+    const mergedDenominations = fallbackDenominations.map((denom) => {
+      const savedDenom = savedDenominationsById.get(denom.id) || {};
+      return {
+        ...denom,
+        originalPrice: Number.isFinite(Number(savedDenom.originalPrice)) ? Number(savedDenom.originalPrice) : denom.originalPrice,
+        price: Number.isFinite(Number(savedDenom.price)) ? Number(savedDenom.price) : denom.price,
+        points: Number.isFinite(Number(savedDenom.points)) ? Number(savedDenom.points) : denom.points,
+        stock: Number.isFinite(Number(savedDenom.stock)) ? Number(savedDenom.stock) : denom.stock,
+        description: typeof savedDenom.description === 'string' && savedDenom.description.trim()
+          ? savedDenom.description
+          : denom.description,
+      };
+    });
+
+    mergedById.set(product.id, normalize({
+      ...product,
+      active: savedProduct.active !== false,
+      popular: typeof savedProduct.popular === 'boolean' ? savedProduct.popular : product.popular,
+      discount: typeof savedProduct.discount === 'string' ? savedProduct.discount : product.discount,
+      denominations: mergedDenominations,
+    }));
   });
 
   return Array.from(mergedById.values());
