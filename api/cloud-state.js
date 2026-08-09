@@ -77,6 +77,38 @@ function sanitizeValue(value) {
   return null;
 }
 
+function isCompromisedProductState(value) {
+  if (!Array.isArray(value)) return false;
+  const serialized = JSON.stringify(value).toLowerCase();
+  const blockedPatterns = [
+    'web nipu',
+    'kontol',
+    'depositphotos.com/1496387/14240',
+    'middle-finger',
+    'fuck-you',
+    'judol',
+    'slot gacor',
+    'casino',
+  ];
+  if (blockedPatterns.some((pattern) => serialized.includes(pattern))) return true;
+
+  const namedProducts = value.filter((product) => cleanText(product?.name || '', 120));
+  const uniqueNames = new Set(namedProducts.map((product) => cleanText(product.name, 120).toLowerCase()));
+  return namedProducts.length > 1 && uniqueNames.size === 1;
+}
+
+async function writeRowsRaw(rows) {
+  const response = await fetch(supabaseRestUrl('?on_conflict=key'), {
+    method: 'POST',
+    headers: headers({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+    body: JSON.stringify(rows),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Supabase state write failed: ${response.status}`);
+  }
+}
+
 function mergeUsers(existingUsers, incomingUsers) {
   const usersByEmail = new Map();
   [...(Array.isArray(existingUsers) ? existingUsers : []), ...(Array.isArray(incomingUsers) ? incomingUsers : [])].forEach((user) => {
@@ -351,10 +383,17 @@ async function readState(keys) {
   }
 
   const rows = await response.json();
-  return rows.reduce((acc, row) => {
+  const state = rows.reduce((acc, row) => {
     if (sanitizeKey(row.key)) acc[row.key] = row.value;
     return acc;
   }, {});
+
+  if (isCompromisedProductState(state.goisiin_products)) {
+    state.goisiin_products = [];
+    await writeRowsRaw([{ key: 'goisiin_products', value: [] }]);
+  }
+
+  return state;
 }
 
 async function writeState(updates) {
@@ -387,15 +426,7 @@ async function writeState(updates) {
 
   if (rows.length === 0) return 0;
 
-  const response = await fetch(supabaseRestUrl('?on_conflict=key'), {
-    method: 'POST',
-    headers: headers({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
-    body: JSON.stringify(rows),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase state write failed: ${response.status}`);
-  }
+  await writeRowsRaw(rows);
 
   return rows.length;
 }
