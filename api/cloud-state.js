@@ -188,14 +188,19 @@ function sanitizeStateValue(key, value) {
 }
 
 async function writeRowsRaw(rows) {
+  const cleanRows = rows.map((row) => ({
+    key: row.key,
+    value: row.value === undefined ? null : JSON.parse(JSON.stringify(row.value ?? null)),
+  }));
   const response = await fetch(supabaseRestUrl('?on_conflict=key'), {
     method: 'POST',
     headers: headers({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
-    body: JSON.stringify(rows),
+    body: JSON.stringify(cleanRows),
   });
 
   if (!response.ok) {
-    throw new Error(`Supabase state write failed: ${response.status}`);
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Supabase state write failed: ${response.status} ${cleanText(detail, 140)}`);
   }
 }
 
