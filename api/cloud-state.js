@@ -134,7 +134,7 @@ function sanitizeChatThreads(value) {
         ? thread.messages.filter((message) => !hasCompromisedText(JSON.stringify(message)))
         : [];
       const userName = hasCompromisedText(thread.userName) ? 'Pengunjung' : thread.userName;
-      const activeAdmin = hasCompromisedText(thread.activeAdmin) ? null : thread.activeAdmin;
+      const activeAdmin = hasCompromisedText(thread.activeAdmin) ? '' : thread.activeAdmin;
       return {
         ...thread,
         userName,
@@ -181,7 +181,7 @@ function sanitizeStateValue(key, value) {
   if (key === 'goisiin_chat_threads') return sanitizeChatThreads(value);
   if (key === 'goisiin_wallet_ledger') return sanitizeWalletLedger(value);
   if (key === 'goisiin_wallet_withdrawals') return sanitizeWithdrawals(value);
-  if (key === 'goisiin_chat_active_admin' && hasCompromisedText(value)) return null;
+  if (key === 'goisiin_chat_active_admin' && hasCompromisedText(value)) return '';
   if (key === 'goisiin_chat_admin_mode' && hasCompromisedText(JSON.stringify(value))) return false;
   if (hasCompromisedText(JSON.stringify(value))) return scrubCompromisedStrings(value);
   return value;
